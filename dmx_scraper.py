@@ -1,3 +1,4 @@
+import os
 import sys
 import json
 import logging
@@ -200,6 +201,28 @@ def scrape_url_list(urls: list) -> list:
         results.append(data)
     return results
 
+def scrape_all_products(products_file: str = "products.json") -> list:
+    """Read products.json or list and scrape all items."""
+    urls = []
+    if os.path.exists(products_file):
+        try:
+            with open(products_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict) and "url" in item:
+                            urls.append(item["url"])
+                        elif isinstance(item, str):
+                            urls.append(item)
+        except Exception as e:
+            logging.error(f"Error reading {products_file}: {e}")
+
+    if not urls:
+        urls = ["https://www.dienmayxanh.com/may-loc-khong-khi/may-loc-khong-khi-lg-puricare-360-hit-as60ghwg0-41w"]
+
+    return scrape_url_list(urls)
+
 if __name__ == "__main__":
     test_url = "https://www.dienmayxanh.com/may-loc-khong-khi/may-loc-khong-khi-lg-puricare-360-hit-as60ghwg0-41w"
     print(json.dumps(scrape_dmx_product(test_url), ensure_ascii=False, indent=2))
+
