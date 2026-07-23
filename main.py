@@ -24,11 +24,17 @@ def run_price_automation(config_file: str = "products.json"):
     try:
         logging.info("Starting Điện Máy Xanh Price Tracker Automation (GMT+7)...")
 
-        # 1. Load Environment variables or fallback configs
-        telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN", DEFAULT_TELEGRAM_TOKEN)
-        telegram_chat_id = os.environ.get("TELEGRAM_CHAT_ID", DEFAULT_CHAT_ID)
+        # 1. Robust Environment variables loading with strict fallback
+        env_token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+        env_chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+
+        telegram_token = env_token if env_token else DEFAULT_TELEGRAM_TOKEN
+        telegram_chat_id = env_chat_id if env_chat_id else DEFAULT_CHAT_ID
+
         gsheet_creds = os.environ.get("GSHEET_CREDS_FILE", "credentials.json")
         gsheet_name = os.environ.get("GSHEET_NAME", "DMX_Price_Tracker")
+
+        logging.info(f"Using Telegram Chat ID: {telegram_chat_id}")
 
         # 2. Scrape products
         logging.info(f"Reading product configuration from: {config_file}")

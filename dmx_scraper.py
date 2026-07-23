@@ -26,6 +26,34 @@ USER_AGENTS = [
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
 ]
 
+# Shared Session for Cookie Persistence
+SCRAPER_SESSION = requests.Session()
+SESSION_INITIALIZED = False
+
+def init_scraper_session():
+    global SESSION_INITIALIZED, SCRAPER_SESSION
+    if not SESSION_INITIALIZED:
+        try:
+            SCRAPER_SESSION.headers.update({
+                "User-Agent": USER_AGENTS[0],
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+                "Cache-Control": "no-cache",
+                "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"Windows"',
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Upgrade-Insecure-Requests": "1",
+            })
+            logging.info("Initializing DMX Session Cookies from Homepage...")
+            SCRAPER_SESSION.get("https://www.dienmayxanh.com", timeout=10, verify=False)
+            SESSION_INITIALIZED = True
+        except Exception as e:
+            logging.warning(f"Session initialization warning: {e}")
+
 def clean_price(price_str: str) -> int:
     """Helper function to clean and parse price string to integer."""
     if not price_str:
@@ -46,28 +74,15 @@ def clean_text(text: str) -> str:
 
 def fetch_html_content(url: str) -> str:
     """
-    Fetches HTML content using requests with retry, falling back to curl for 100% bypass reliability.
+    Fetches HTML content using persistent requests Session, falling back to curl.
     """
-    # Method 1: Requests
+    init_scraper_session()
+
+    # Method 1: Requests with Session Cookies
     for attempt in range(1, 3):
-        ua = USER_AGENTS[(attempt - 1) % len(USER_AGENTS)]
-        headers = {
-            "User-Agent": ua,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
-            "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Cache-Control": "no-cache",
-            "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
-            "Sec-Ch-Ua-Mobile": "?0",
-            "Sec-Ch-Ua-Platform": '"Windows"',
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "none",
-            "Sec-Fetch-User": "?1",
-            "Upgrade-Insecure-Requests": "1",
-        }
         try:
-            logging.info(f"Fetching URL via Requests (Attempt {attempt}): {url}")
-            res = requests.get(url, headers=headers, verify=False, timeout=12)
+            logging.info(f"Fetching URL via Requests Session (Attempt {attempt}): {url}")
+            res = SCRAPER_SESSION.get(url, verify=False, timeout=12)
             if res.status_code == 200 and len(res.text) > 2000 and "dienmayxanh" in res.text.lower():
                 return res.text
         except Exception as e:
