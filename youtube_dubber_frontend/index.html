@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Chinese Story Dubber & Translator | Dịch & Lồng Tiếng Truyện Ngắn</title>
+  <meta name="description" content="Nền tảng tự động dịch thuật, lồng tiếng và biến đổi video truyện ngắn tiếng Trung sang Tiếng Việt / Tiếng Anh ready upload YouTube.">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    
+    <!-- Hero Header -->
+    <header class="header-hero">
+      <span class="badge">🚀 AI Video Dubbing Platform</span>
+      <h1>Dịch, Lồng Tiếng & Biên Tập Truyện Ngắn YouTube</h1>
+      <p class="subtitle">Tự động chuyển đổi truyện ngắn tiếng Trung (20–30 phút) sang Tiếng Việt & Tiếng Anh với giọng đọc truyền cảm và tính năng lách bản quyền YouTube chuyên nghiệp.</p>
+    </header>
+
+    <!-- Main Input Form Card -->
+    <main class="glass-card">
+      <form id="dubbingForm">
+        
+        <!-- YouTube URL Input -->
+        <div class="form-group">
+          <label for="youtubeUrl">🔗 Link Video YouTube Truyện Ngắn (Trung Quốc)</label>
+          <input type="url" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." required>
+        </div>
+
+        <!-- Options Grid -->
+        <div class="options-grid">
+          
+          <!-- Target Language -->
+          <div class="form-group">
+            <label for="targetLang">🌐 Ngôn ngữ Đầu ra</label>
+            <select id="targetLang">
+              <option value="vi">Tiếng Việt (Phụ đề + Lồng tiếng)</option>
+              <option value="en">Tiếng Anh (Subtitles + Dubbing)</option>
+            </select>
+          </div>
+
+          <!-- Dubbing Mode -->
+          <div class="form-group">
+            <label for="dubbingMode">🎙️ Chế độ Âm thanh</label>
+            <select id="dubbingMode">
+              <option value="full_dubbing">Lồng tiếng & Thuyết minh đầy đủ</option>
+              <option value="subtitles_only">Chỉ tạo Phụ đề (Soft/Hard Sub)</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Anti-Copyright Video Transformation Toggle -->
+        <div class="form-group">
+          <div class="toggle-wrapper">
+            <div>
+              <strong>🛡️ Biến đổi Video lách Bản quyền YouTube (Anti-Copyright)</strong>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Tự động lật hình (hflip), tăng tốc nhẹ (1.03x), crop viền 4% & trộn nhạc nền chìm.</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="antiCopyrightToggle" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="btnSubmit" class="btn-submit">
+          <span>⚡ Bắt đầu Dịch & Lồng Tiếng</span>
+        </button>
+
+      </form>
+    </main>
+
+    <!-- Live Progress Card -->
+    <section id="progressCard" class="glass-card progress-card">
+      <h2>⏳ Tiến trình Xử lý Real-time</h2>
+      <p id="progressStage" style="color: #a855f7; font-weight: 600; margin-top: 0.5rem;">Đang kết nối WebSocket...</p>
+      
+      <div class="progress-bar-bg">
+        <div id="progressBarFill" class="progress-bar-fill"></div>
+      </div>
+      
+      <div class="progress-status">
+        <span id="progressPctText">0%</span>
+        <span>Thời gian ước tính: ~2-3 phút</span>
+      </div>
+    </section>
+
+    <!-- Preview & Download Section -->
+    <section id="previewCard" class="glass-card preview-card">
+      <h2>🎉 Thành phẩm Video Lồng Tiếng</h2>
+      <p id="videoTitleText" style="color: var(--text-muted); margin-bottom: 1rem;">Video MP4 HD sẵn sàng upload lên YouTube</p>
+      
+      <video id="videoPreview" controls>
+        Trình duyệt của bạn không hỗ trợ phát video HTML5.
+      </video>
+
+      <div class="download-actions">
+        <a id="btnDownloadVideo" href="#" class="btn-download" download>📥 Tải Video MP4 HD</a>
+        <a id="btnDownloadSrt" href="#" class="btn-download" download>📄 Tải Phụ đề (.SRT)</a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+      <p>© 2026 YouTube Chinese Story Dubber & Translator Platform. Built for High-Performance Production.</p>
+    </footer>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: youtube_dubber_redis
+    ports:
+      - "6379:6379"
+    restart: always
+
+  backend:
+    build:
+      context: ./youtube_dubber_backend
+      dockerfile: Dockerfile
+    container_name: youtube_dubber_backend
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./youtube_dubber_backend/storage:/app/youtube_dubber_backend/storage
+    depends_on:
+      - redis
+    restart: always
+
+  frontend:
+    image: nginx:alpine
+    container_name: youtube_dubber_frontend
+    ports:
+      - "80:80"
+    volumes:
+      - ./youtube_dubber_frontend:/usr/share/nginx/html:ro
+    restart: always

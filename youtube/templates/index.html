@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Dịch & Lồng Tiếng Phim Trung Quốc đăng YouTube</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo">
+                <i class="fa-solid fa-wand-magic-sparkles text-accent"></i>
+                <h2>YT Drama Studio <span class="badge">v2.0 Pro</span></h2>
+            </div>
+            <p class="subtitle">Dịch thuật, Lồng tiếng AI & Phụ đề chuẩn YouTube cho Truyện Ngắn / Phim Ngắn Trung Quốc</p>
+        </header>
+
+        <!-- Main Grid Layout -->
+        <main class="main-content">
+            <!-- Left Panel: Settings & Control -->
+            <section class="card settings-card">
+                <h3><i class="fa-solid fa-sliders"></i> Cấu Hình Xử Lý Video</h3>
+                
+                <form id="processForm">
+                    <!-- Input Source -->
+                    <div class="form-group">
+                        <label><i class="fa-solid fa-link"></i> Link Video (YouTube / Douyin / Bilibili / Direct Link) hoặc File Path</label>
+                        <input type="text" id="videoSource" placeholder="Dán URL Youtube/Douyin hoặc đường dẫn file .mp4 trên máy" required>
+                    </div>
+
+                    <!-- Grid Controls -->
+                    <div class="form-grid">
+                        <!-- Subtitle Option -->
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-closed-captioning"></i> Ngôn Ngữ Phụ Đề</label>
+                            <select id="subLang">
+                                <option value="vi" selected>Tiếng Việt (Phụ đề Việt)</option>
+                                <option value="en">Tiếng Anh (English Subs)</option>
+                                <option value="dual_zh_vi">Song Ngữ (Trung + Việt)</option>
+                                <option value="dual_en_vi">Song Ngữ (Anh + Việt)</option>
+                                <option value="zh">Tiếng Trung Gốc</option>
+                                <option value="none">Không dùng Phụ đề</option>
+                            </select>
+                        </div>
+
+                        <!-- Voiceover Language Option -->
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-microphone-lines"></i> Ngôn Ngữ Lồng Tiếng (Voiceover)</label>
+                            <select id="voiceLang">
+                                <option value="vi" selected>Tiếng Việt (Thuyết minh)</option>
+                                <option value="en">Tiếng Anh (English Dub)</option>
+                                <option value="none">Không lồng tiếng (Giữ âm gốc)</option>
+                            </select>
+                        </div>
+
+                        <!-- Voice Preset Selection -->
+                        <div class="form-group" id="voicePresetGroup">
+                            <label><i class="fa-solid fa-user-gear"></i> Giọng Đọc Thuyết Minh (AI Neural)</label>
+                            <select id="voiceKey">
+                                <option value="female_1" selected>Nữ (Hoài My / Ana - Ngọt ngào, truyền cảm)</option>
+                                <option value="male_1">Nam (Nam Minh / Guy - Trầm ấm, lôi cuốn)</option>
+                                <option value="female_2">Nữ 2 (Jenny - Tự nhiên)</option>
+                                <option value="male_2">Nam 2 (Christopher - Kể chuyện)</option>
+                            </select>
+                        </div>
+
+                        <!-- TTS Speed Rate -->
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-gauge-high"></i> Tốc Độ Đọc Giọng AI</label>
+                            <select id="ttsRate">
+                                <option value="-12%">Chậm mượt -12% (Truyền cảm, rõ chữ)</option>
+                                <option value="-6%">Chậm nhẹ -6% (Khuyên dùng)</option>
+                                <option value="0%" selected>Chuẩn 0% (Tốc độ mặc định)</option>
+                                <option value="+8%">Nhanh nhẹ +8%</option>
+                            </select>
+                        </div>
+
+                        <!-- Original Audio Volume -->
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-volume-xmark"></i> Âm Lượng Video Gốc</label>
+                            <select id="origAudioVol">
+                                <option value="0.0" selected>Mute 0% (Tắt 100% tiếng gốc - Giọng Việt trong rõ)</option>
+                                <option value="0.15">Nhỏ 15% (Khuyên dùng - Giữ nhạc nền phim)</option>
+                                <option value="0.30">Vừa 30%</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Anti-Copyright Options Box -->
+                    <div class="anti-copyright-box" style="margin-top: 15px; padding: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+                        <h4 style="margin-bottom: 10px; color: #38ef7d; font-size: 14px;"><i class="fa-solid fa-shield-halved"></i> Bộ Chống Bản Quyền YouTube (Anti-Content ID Shield)</h4>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px;">
+                            <label><input type="checkbox" id="antiCrop" checked> Thu phóng Crop 3% (Tránh quét khung hình)</label>
+                            <label><input type="checkbox" id="antiColor" checked> Đổi màu & tương phản (Lệch dải màu gốc)</label>
+                            <label><input type="checkbox" id="antiSpeed" checked> Tăng tốc nhẹ 1.02x (Lệch FPS)</label>
+                            <label><input type="checkbox" id="antiMirror"> Lật ngang khung hình (Mirroring)</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" id="btnStart" style="margin-top: 15px;">
+                        <i class="fa-solid fa-bolt"></i> Bắt Đầu Bắt Thoại & Dịch Kịch Bản
+                    </button>
+                </form>
+            </section>
+
+            <!-- Right Panel: Status & Progress -->
+            <section class="card status-card">
+                <h3><i class="fa-solid fa-bars-progress"></i> Tiến Độ Xử Lý</h3>
+                <div class="progress-box">
+                    <div class="status-badge" id="statusBadge">Sẵn sàng</div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="progressBar" style="width: 0%;"></div>
+                    </div>
+                    <p class="progress-text" id="progressText">Chưa có công việc nào đang chạy.</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Subtitle Editor & Preview Section -->
+        <section class="card editor-card hidden" id="editorSection">
+            <div class="card-header-actions">
+                <h3><i class="fa-solid fa-pen-to-square"></i> Xem & Hiệu Chỉnh Kịch Bản Dịch (Bảng Phụ Đề)</h3>
+                <button class="btn btn-success" id="btnRenderFinal">
+                    <i class="fa-solid fa-video"></i> Render Video Phim Hoàn Chỉnh MP4
+                </button>
+            </div>
+
+            <!-- Interactive Subtitles Table -->
+            <div class="table-wrapper">
+                <table class="sub-table" id="subTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 60px;">#</th>
+                            <th style="width: 140px;">Mốc Thời Gian</th>
+                            <th>Tiếng Trung Gốc</th>
+                            <th>Bản Dịch Tiếng Việt</th>
+                            <th>Bản Dịch Tiếng Anh</th>
+                        </tr>
+                    </thead>
+                    <tbody id="subTableBody">
+                        <!-- Dynamic rows populated via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- Final Result & Youtube Metadata Section -->
+        <section class="card result-card hidden" id="resultSection">
+            <h3><i class="fa-solid fa-circle-check text-success"></i> Video Hoàn Tất & Bộ SEO YouTube</h3>
+
+            <div class="result-grid">
+                <!-- Video Player -->
+                <div class="video-preview-box">
+                    <video id="finalVideoPlayer" controls class="video-player"></video>
+                    <a id="downloadVideoBtn" class="btn btn-accent" download style="margin-top: 15px; display: block; text-align: center;">
+                        <i class="fa-solid fa-download"></i> Tải Video MP4 Về Máy
+                    </a>
+                </div>
+
+                <!-- YouTube Metadata Generator Box -->
+                <div class="metadata-box">
+                    <h4><i class="fa-brands fa-youtube text-danger"></i> Gợi Ý Nội Dung Đăng YouTube</h4>
+                    <div class="form-group">
+                        <label>Tiêu đề (Title):</label>
+                        <input type="text" id="ytTitle" readonly>
+                        <button class="btn-copy" onclick="copyField('ytTitle')"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Mô tả (Description):</label>
+                        <textarea id="ytDesc" rows="5" readonly></textarea>
+                        <button class="btn-copy" onclick="copyField('ytDesc')"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Thẻ Tag (Tags):</label>
+                        <input type="text" id="ytTags" readonly>
+                        <button class="btn-copy" onclick="copyField('ytTags')"><i class="fa-regular fa-copy"></i> Sao chép</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

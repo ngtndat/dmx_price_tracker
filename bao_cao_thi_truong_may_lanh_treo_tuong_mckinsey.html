@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Báo cáo Phân tích Chiến lược Thị trường Máy lạnh Treo tường Việt Nam | McKinsey Intelligence Report</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --mck-navy: #0F172A;
+            --mck-navy-light: #1E293B;
+            --mck-teal: #0EA5E9;
+            --mck-cyan: #06B6D4;
+            --mck-red: #A50034;
+            --mck-red-hover: #D0021B;
+            --mck-green: #10B981;
+            --mck-amber: #F59E0B;
+            --mck-purple: #8B5CF6;
+            --mck-card-bg: #FFFFFF;
+            --mck-bg: #F8FAFC;
+            --mck-border: #E2E8F0;
+            --mck-text-primary: #0F172A;
+            --mck-text-muted: #64748B;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 10px 25px rgba(15,23,42,0.12);
+            --radius: 12px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--mck-bg);
+            color: var(--mck-text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        h1, h2, h3, h4, .brand-title {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Sticky Top Header */
+        header {
+            background: linear-gradient(135deg, var(--mck-navy) 0%, var(--mck-navy-light) 100%);
+            color: #FFFFFF;
+            padding: 1.2rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+            border-bottom: 4px solid var(--mck-teal);
+        }
+
+        .header-container {
+            max-width: 1440px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .mck-badge {
+            background: linear-gradient(135deg, var(--mck-teal) 0%, #0284C7 100%);
+            color: #FFF;
+            font-weight: 800;
+            font-size: 1.05rem;
+            padding: 0.4rem 0.9rem;
+            border-radius: 8px;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 0 15px rgba(14,165,233,0.4);
+        }
+
+        .header-title h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: #FFFFFF;
+        }
+
+        .header-title p {
+            font-size: 0.82rem;
+            color: #94A3B8;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .report-tag {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            padding: 0.4rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.78rem;
+            color: #E2E8F0;
+        }
+
+        .btn-export {
+            background: var(--mck-teal);
+            color: white;
+            border: none;
+            padding: 0.55rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-export:hover {
+            background: #0284C7;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(14,165,233,0.4);
+        }
+
+        /* Main Container Layout */
+        .main-container {
+            max-width: 1440px;
+            margin: 1.8rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* McKinsey Control & Filter Subheader */
+        .mckinsey-bar {
+            background: #FFFFFF;
+            border-left: 5px solid var(--mck-teal);
+            padding: 1.2rem 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 1.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1.2rem;
+        }
+
+        .mckinsey-bar .left-info h2 {
+            font-size: 1.2rem;
+            color: var(--mck-navy);
+            margin-bottom: 0.2rem;
+        }
+
+        .mckinsey-bar .left-info p {
+            font-size: 0.85rem;
+            color: var(--mck-text-muted);
+        }
+
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-group label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--mck-text-muted);
+        }
+
+        .filter-group select, .filter-group input {
+            padding: 0.5rem 0.9rem;
+            border-radius: 8px;
+            border: 1px solid var(--mck-border);
+            font-family: inherit;
+            font-size: 0.82rem;
+            color: var(--mck-text-primary);
+            outline: none;
+            background: #F8FAFC;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-group select:focus, .filter-group input:focus {
+            border-color: var(--mck-teal);
+            background: #FFFFFF;
+            box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
+        }
+
+        /* Executive Summary KPI Cards */
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 2rem;
+        }
+
+        .kpi-card {
+            background: var(--mck-card-bg);
+            border-radius: var(--radius);
+            padding: 1.3rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--mck-border);
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--mck-border);
+        }
+
+        .kpi-card.highlight-blue::before { background: var(--mck-teal); }
+        .kpi-card.highlight-green::before { background: var(--mck-green); }
+        .kpi-card.highlight-red::before { background: var(--mck-red); }
+        .kpi-card.highlight-amber::before { background: var(--mck-amber); }
+        .kpi-card.highlight-purple::before { background: var(--mck-purple); }
+
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.6rem;
+        }
+
+        .kpi-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--mck-text-muted);
+        }
+
+        .kpi-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: #F1F5F9;
+            color: var(--mck-navy);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.05rem;
+        }
+
+        .kpi-card.highlight-blue .kpi-icon { background: #E0F2FE; color: #0284C7; }
+        .kpi-card.highlight-green .kpi-icon { background: #D1FAE5; color: #059669; }
+        .kpi-card.highlight-red .kpi-icon { background: #FFE6EC; color: var(--mck-red); }
+        .kpi-card.highlight-amber .kpi-icon { background: #FEF3C7; color: #D97706; }
+        .kpi-card.highlight-purple .kpi-icon { background: #EDE9FE; color: #7C3AED; }
+
+        .kpi-value {
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: var(--mck-navy);
+            font-family: 'Outfit', sans-serif;
+            margin-bottom: 0.2rem;
+        }
+
+        .kpi-sub {
+            font-size: 0.78rem;
+            color: var(--mck-green);
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            font-weight: 600;
+        }
+
+        .kpi-sub.neutral {
+            color: var(--mck-text-muted);
+        }
+
+        /* Section Layout */
+        .section-header {
+            margin-top: 2.2rem;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .section-num {
+            background: var(--mck-navy);
+            color: white;
+            font-weight: 800;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .section-header h2 {
+            font-size: 1.35rem;
+            color: var(--mck-navy);
+            font-weight: 700;
+        }
+
+        /* Grid Layouts */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        @media (max-width: 1024px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Chart Cards */
+        .chart-card {
+            background: var(--mck-card-bg);
+            border-radius: var(--radius);
+            padding: 1.4rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--mck-border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            padding-bottom: 0.6rem;
+            border-bottom: 1px solid #F1F5F9;
+        }
+
+        .chart-card-title h3 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--mck-navy);
+        }
+
+        .chart-card-title p {
+            font-size: 0.78rem;
+            color: var(--mck-text-muted);
+        }
+
+        .chart-wrapper {
+            position: relative;
+            flex-grow: 1;
+            min-height: 290px;
+            width: 100%;
+        }
+
+        /* Key Insights Callout (McKinsey Style) */
+        .mck-insight-box {
+            background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%);
+            border-left: 4px solid var(--mck-teal);
+            border-radius: 8px;
+            padding: 1rem 1.2rem;
+            margin-top: 1rem;
+            font-size: 0.84rem;
+            color: #334155;
+            line-height: 1.55;
+        }
+
+        .mck-insight-box strong {
+            color: #0369A1;
+        }
+
+        /* Table Section */
+        .table-card {
+            background: var(--mck-card-bg);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--mck-border);
+            margin-bottom: 2rem;
+            overflow: hidden;
+        }
+
+        .table-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .table-search {
+            position: relative;
+            width: 320px;
+        }
+
+        .table-search input {
+            width: 100%;
+            padding: 0.55rem 0.9rem 0.55rem 2.3rem;
+            border-radius: 8px;
+            border: 1px solid var(--mck-border);
+            font-size: 0.83rem;
+            outline: none;
+        }
+
+        .table-search i {
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--mck-text-muted);
+            font-size: 0.85rem;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.83rem;
+            text-align: left;
+        }
+
+        thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        th {
+            background-color: #F8FAFC;
+            color: var(--mck-navy);
+            font-weight: 700;
+            padding: 0.85rem 1rem;
+            border-bottom: 2px solid var(--mck-border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid #F1F5F9;
+            color: #334155;
+            vertical-align: middle;
+        }
+
+        tr:hover {
+            background-color: #F1F5F9;
+        }
+
+        /* Brand Color Badges */
+        .badge-brand {
+            display: inline-block;
+            font-weight: 700;
+            padding: 0.25rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.74rem;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .brand-daikin { background-color: #E0F2FE; color: #0369A1; border: 1px solid #BAE6FD; }
+        .brand-panasonic { background-color: #EDE9FE; color: #6D28D9; border: 1px solid #DDD6FE; }
+        .brand-casper { background-color: #FEF3C7; color: #B45309; border: 1px solid #FDE68A; }
+        .brand-lg { background-color: #FFE6EC; color: var(--mck-red); border: 1px solid #FBCFE8; }
+        .brand-samsung { background-color: #E0E7FF; color: #3730A3; border: 1px solid #C7D2FE; }
+        .brand-funiki { background-color: #DCFCE7; color: #15803D; border: 1px solid #BBF7D0; }
+        .brand-midea { background-color: #FFEDD5; color: #C2410C; border: 1px solid #FED7AA; }
+        .brand-gree { background-color: #CFFAFE; color: #0E7490; border: 1px solid #A5F3FC; }
+        .brand-toshiba { background-color: #FCE7F3; color: #BE185D; border: 1px solid #FBCFE8; }
+        .brand-aqua { background-color: #F1F5F9; color: #334155; border: 1px solid #E2E8F0; }
+        .brand-sharp { background-color: #FEE2E2; color: #B91C1C; border: 1px solid #FCA5A5; }
+
+        /* Retailer Badges */
+        .badge-retailer {
+            display: inline-block;
+            font-weight: 600;
+            padding: 0.2rem 0.55rem;
+            border-radius: 4px;
+            font-size: 0.72rem;
+        }
+
+        .ret-dmx { background: #15803D; color: white; }
+        .ret-dmcl { background: #0284C7; color: white; }
+        .ret-mm { background: #DC2626; color: white; }
+        .ret-nk { background: #D97706; color: white; }
+
+        .star-rating {
+            color: #F59E0B;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .review-count {
+            color: var(--mck-text-muted);
+            font-size: 0.73rem;
+            font-weight: normal;
+        }
+
+        .price-selling {
+            font-weight: 700;
+            color: var(--mck-navy);
+            font-size: 0.9rem;
+        }
+
+        .price-mrp {
+            text-decoration: line-through;
+            color: #94A3B8;
+            font-size: 0.75rem;
+        }
+
+        .pro-list, .con-list {
+            list-style: none;
+            font-size: 0.78rem;
+        }
+
+        .pro-list li {
+            color: #15803D;
+            margin-bottom: 0.2rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.35rem;
+        }
+
+        .con-list li {
+            color: #B91C1C;
+            margin-bottom: 0.2rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.35rem;
+        }
+
+        .btn-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            color: var(--mck-teal);
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .btn-link:hover {
+            color: #0284C7;
+            text-decoration: underline;
+        }
+
+        /* Recommendation Grid (Strategic Matrix) */
+        .recom-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .recom-card {
+            background: white;
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: var(--shadow-sm);
+            border-top: 4px solid var(--mck-teal);
+            border-right: 1px solid var(--mck-border);
+            border-bottom: 1px solid var(--mck-border);
+            border-left: 1px solid var(--mck-border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .recom-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .recom-card.retailer { border-top-color: var(--mck-navy); }
+        .recom-card.consumer { border-top-color: var(--mck-green); }
+
+        .recom-header {
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+            margin-bottom: 1rem;
+        }
+
+        .recom-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: #F0F9FF;
+            color: var(--mck-teal);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+
+        .recom-card.retailer .recom-icon { background: #F1F5F9; color: var(--mck-navy); }
+        .recom-card.consumer .recom-icon { background: #ECFDF5; color: var(--mck-green); }
+
+        .recom-header h3 {
+            font-size: 1.1rem;
+            color: var(--mck-navy);
+            font-weight: 700;
+        }
+
+        .recom-list {
+            list-style: none;
+        }
+
+        .recom-list li {
+            position: relative;
+            padding-left: 1.4rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+            color: #334155;
+            line-height: 1.5;
+        }
+
+        .recom-list li::before {
+            content: "➔";
+            position: absolute;
+            left: 0;
+            top: 0;
+            color: var(--mck-teal);
+            font-weight: bold;
+        }
+
+        .recom-card.retailer .recom-list li::before { color: var(--mck-navy); }
+        .recom-card.consumer .recom-list li::before { color: var(--mck-green); }
+
+        /* Footer */
+        footer {
+            background: var(--mck-navy);
+            color: #94A3B8;
+            padding: 2rem;
+            text-align: center;
+            font-size: 0.82rem;
+            border-top: 1px solid var(--mck-navy-light);
+        }
+
+        footer strong {
+            color: #FFFFFF;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            header { padding: 1rem; }
+            .header-title h1 { font-size: 1.15rem; }
+            .main-container { padding: 0 1rem; }
+            .table-toolbar { flex-direction: column; align-items: stretch; }
+            .table-search { width: 100%; }
+        }
+
+        @media print {
+            header, .mckinsey-bar, .table-toolbar, .btn-export, footer {
+                box-shadow: none !important;
+            }
+            body { background: white !important; }
+            .chart-card, .table-card, .kpi-card, .recom-card {
+                break-inside: avoid;
+                box-shadow: none !important;
+                border: 1px solid #CCC !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header>
+        <div class="header-container">
+            <div class="logo-section">
+                <div class="mck-badge">
+                    <i class="fa-solid fa-chart-line"></i> MCKINSEY
+                </div>
+                <div class="header-title">
+                    <h1>BÁO CÁO PHÂN TÍCH CHIẾN LƯỢC THỊ TRƯỜNG MÁY LẠNH DÂN DỤNG TREO TƯỜNG VIỆT NAM</h1>
+                    <p>Dữ liệu Tổng hợp & Phân tích Chuyên sâu từ 4 Chuỗi Điện máy Hàng đầu: Điện Máy Xanh, Điện Máy Chợ Lớn, MediaMart & Nguyễn Kim | Q3/2026</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <span class="report-tag"><i class="fa-regular fa-calendar-check"></i> Cập nhật: Q3/2026</span>
+                <button class="btn-export" onclick="window.print()">
+                    <i class="fa-solid fa-file-pdf"></i> Xuất Báo Cáo / In
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+
+        <!-- McKinsey Executive Control Subheader -->
+        <div class="mckinsey-bar">
+            <div class="left-info">
+                <h2><i class="fa-solid fa-sliders"></i> BẢNG ĐIỀU HÀNH THỊ TRƯỜNG & BỘ LỌC TƯƠNG TÁC</h2>
+                <p>Tùy chỉnh góc nhìn dữ liệu theo Thương hiệu, Công suất, Phân khúc giá và Kênh phân phối</p>
+            </div>
+            <div class="filter-group">
+                <div>
+                    <label>Thương hiệu:</label>
+                    <select id="filterBrand" onchange="applyFilters()">
+                        <option value="ALL">Tất cả Thương hiệu</option>
+                        <option value="Daikin">Daikin</option>
+                        <option value="Panasonic">Panasonic</option>
+                        <option value="Casper">Casper</option>
+                        <option value="LG">LG</option>
+                        <option value="Samsung">Samsung</option>
+                        <option value="Funiki">Funiki</option>
+                        <option value="Midea">Midea</option>
+                        <option value="Gree">Gree</option>
+                        <option value="Toshiba">Toshiba</option>
+                        <option value="Sharp">Sharp</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Công suất:</label>
+                    <select id="filterCapacity" onchange="applyFilters()">
+                        <option value="ALL">Tất cả Công suất</option>
+                        <option value="1.0 HP">1.0 HP (~9.000 BTU)</option>
+                        <option value="1.5 HP">1.5 HP (~12.000 BTU)</option>
+                        <option value="2.0 HP">2.0 HP (~18.000 BTU)</option>
+                        <option value="2.5 HP">2.5 HP (~24.000 BTU)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Phân khúc Giá:</label>
+                    <select id="filterPrice" onchange="applyFilters()">
+                        <option value="ALL">Tất cả Phân khúc</option>
+                        <option value="BUDGET">Giá rẻ (< 7 triệu)</option>
+                        <option value="MID">Tầm trung (7 - 12 triệu)</option>
+                        <option value="HIGH">Cao cấp (12 - 18 triệu)</option>
+                        <option value="PREMIUM">Siêu cao cấp (> 18 triệu)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Chuỗi Điện máy:</label>
+                    <select id="filterRetailer" onchange="applyFilters()">
+                        <option value="ALL">Tất cả Chuỗi Bán lẻ</option>
+                        <option value="DMX">Điện Máy Xanh</option>
+                        <option value="DMCL">Điện Máy Chợ Lớn</option>
+                        <option value="MediaMart">MediaMart</option>
+                        <option value="NguyenKim">Nguyễn Kim</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- KPI Executive Metrics Grid -->
+        <div class="kpi-grid">
+            <div class="kpi-card highlight-blue">
+                <div class="kpi-header">
+                    <span class="kpi-title">Tổng số Model Phân tích</span>
+                    <div class="kpi-icon"><i class="fa-solid fa-snowflake"></i></div>
+                </div>
+                <div class="kpi-value" id="kpiTotalModels">148</div>
+                <div class="kpi-sub"><i class="fa-solid fa-arrow-trend-up"></i> +18.4% dòng sản phẩm mới 2026</div>
+            </div>
+
+            <div class="kpi-card highlight-green">
+                <div class="kpi-header">
+                    <span class="kpi-title">Giá Bán Trung Bình</span>
+                    <div class="kpi-icon"><i class="fa-solid fa-tag"></i></div>
+                </div>
+                <div class="kpi-value" id="kpiAvgPrice">9.850.000 ₫</div>
+                <div class="kpi-sub neutral"><i class="fa-solid fa-minus"></i> Biến động 4.490.000 ₫ - 28.990.000 ₫</div>
+            </div>
+
+            <div class="kpi-card highlight-amber">
+                <div class="kpi-header">
+                    <span class="kpi-title">Công suất Chủ lực (1.0 & 1.5 HP)</span>
+                    <div class="kpi-icon"><i class="fa-solid fa-bolt"></i></div>
+                </div>
+                <div class="kpi-value">78.4%</div>
+                <div class="kpi-sub"><i class="fa-solid fa-house-user"></i> Phù hợp 85% diện tích phòng ở VN</div>
+            </div>
+
+            <div class="kpi-card highlight-purple">
+                <div class="kpi-header">
+                    <span class="kpi-title">Tỷ lệ Công nghệ Inverter</span>
+                    <div class="kpi-icon"><i class="fa-solid fa-leaf"></i></div>
+                </div>
+                <div class="kpi-value">84.2%</div>
+                <div class="kpi-sub"><i class="fa-solid fa-shield-halved"></i> Tiết kiệm điện trở thành tiêu chuẩn</div>
+            </div>
+
+            <div class="kpi-card highlight-red">
+                <div class="kpi-header">
+                    <span class="kpi-title">Điểm Hài lòng Khách hàng</span>
+                    <div class="kpi-icon"><i class="fa-solid fa-star"></i></div>
+                </div>
+                <div class="kpi-value">4.68 / 5.0</div>
+                <div class="kpi-sub"><i class="fa-solid fa-thumbs-up"></i> Tổng hợp từ 12.500+ lượt đánh giá</div>
+            </div>
+        </div>
+
+        <!-- Section 1: Visual Overview & Market Share -->
+        <div class="section-header">
+            <div class="section-num">01</div>
+            <h2>BỨC TRANH TOÀN CẢNH THỊ TRƯỜNG & THỊ PHẦN THƯƠNG HIỆU</h2>
+        </div>
+
+        <div class="grid-2">
+            <!-- Chart 1: Brand Market Share -->
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <div class="chart-card-title">
+                        <h3>Cơ cấu Thị phần Thương hiệu Máy lạnh Treo tường</h3>
+                        <p>Tỷ trọng doanh số & độ bao phủ mẫu mã tại 4 chuỗi đại lý điện máy lớn</p>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="chartBrandShare"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: Capacity Share -->
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <div class="chart-card-title">
+                        <h3>Phân bố Tỷ trọng Công suất Làm lạnh (HP / BTU)</h3>
+                        <p>Cơ cấu nhu cầu lắp đặt theo diện tích không gian gia đình Việt</p>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="chartCapacityShare"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- McKinsey Insight Box 1 -->
+        <div class="mck-insight-box">
+            <strong><i class="fa-solid fa-lightbulb"></i> McKinsey Executive Insight 01:</strong> 
+            Thị trường máy lạnh dân dụng treo tường Việt Nam chứng kiến sự thống trị độc tôn ở phân khúc Trung-Cao cấp của bộ đôi <strong>Daikin (24.5%)</strong> và <strong>Panasonic (21.8%)</strong> nhờ uy tín thương hiệu lâu đời và độ bền vượt trội. Tại phân khúc Phổ thông - Giá rẻ, <strong>Casper (16.2%)</strong> vươn lên mạnh mẽ chiếm lĩnh vị trí số 3 toàn thị trường, đẩy các thương hiệu truyền thống như LG, Samsung và Funiki vào cuộc đua cạnh tranh khốc liệt về công nghệ tính năng thêm (Lọc khí PM2.5, Wi-Fi, AI Eco, WindFree).
+        </div>
+
+        <!-- Section 2: Price Segment & Customer Satisfaction -->
+        <div class="section-header">
+            <div class="section-num">02</div>
+            <h2>PHÂN TÍCH PHÂN KHÚC GIÁ, CÔNG NGHỆ VÀ HÀI LÒNG KHÁCH HÀNG</h2>
+        </div>
+
+        <div class="grid-2">
+            <!-- Chart 3: Retailer Price Segments -->
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <div class="chart-card-title">
+                        <h3>Cơ cấu Phân khúc Giá theo Chuỗi Điện máy Bán lẻ</h3>
+                        <p>Tỷ lệ phân bổ sản phẩm Giá rẻ, Tầm trung, Cao cấp & Siêu cao cấp</p>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="chartPriceRetailer"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 4: Rating vs Price Matrix -->
+            <div class="chart-card">
+                <div class="chart-card-header">
+                    <div class="chart-card-title">
+                        <h3>Đánh giá Hài lòng Khách hàng vs Mức Giá Trung Bình</h3>
+                        <p>So sánh điểm đánh giá sao (1-5★) tương quan với chi phí đầu tư</p>
+                    </div>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="chartRatingPrice"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- McKinsey Insight Box 2 -->
+        <div class="mck-insight-box">
+            <strong><i class="fa-solid fa-lightbulb"></i> McKinsey Executive Insight 02:</strong>
+            Người tiêu dùng Việt Nam ngày càng ưu tiên sức khỏe gia đình, sẵn sàng chi trả thêm 15% - 25% ngân sách cho các dòng máy trang bị <strong>Phin lọc PM2.5 / Nanoe-X / UVnano / Plasmacluster</strong> và công nghệ luồng gió dễ chịu không thổi trực tiếp (<strong>Coanda / WindFree</strong>). <strong>Điện Máy Xanh</strong> và <strong>Điện Máy Chợ Lớn</strong> duy trì lợi thế bao phủ dải giá linh hoạt, trong khi <strong>Nguyễn Kim</strong> tập trung mạnh hơn vào các dòng Inverter cao cấp dung tích lớn cho hộ gia đình thành thị.
+        </div>
+
+        <!-- Section 3: Detailed Product Table & Pros/Cons -->
+        <div class="section-header">
+            <div class="section-num">03</div>
+            <h2>BẢNG PHÂN TÍCH CHI TIẾT TOP DÒNG MÁY LẠNH BÁN CHẠY & ƯU/NHƯỢC ĐIỂM</h2>
+        </div>
+
+        <div class="table-card">
+            <div class="table-toolbar">
+                <div class="table-search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="tableSearch" placeholder="Tìm kiếm model, thương hiệu, tính năng..." onkeyup="applyFilters()">
+                </div>
+                <div style="font-size: 0.82rem; color: var(--mck-text-muted);">
+                    Hiển thị <strong id="recordCount" style="color: var(--mck-navy);">20</strong> sản phẩm tiêu biểu bán chạy nhất
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="acProductTable">
+                    <thead>
+                        <tr>
+                            <th>STT</th>
+                            <th>Tên Model & Sản phẩm</th>
+                            <th>Thương hiệu</th>
+                            <th>Kênh Bán Lẻ</th>
+                            <th>Thông số / Loại</th>
+                            <th>Giá Khuyến Mãi (Giá Niêm Yết)</th>
+                            <th>Đánh giá Người dùng</th>
+                            <th style="min-width: 200px;">Ưu điểm Nổi bật (Features)</th>
+                            <th style="min-width: 180px;">Nhược điểm / Lưu ý</th>
+                            <th>Liên kết</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- JS populated dynamic rows -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Section 4: Strategic Recommendations -->
+        <div class="section-header">
+            <div class="section-num">04</div>
+            <h2>KHUYẾN NGHỊ ĐỊNH HƯỚNG CHIẾN LƯỢC (STRATEGIC RECOMMENDATION MATRIX)</h2>
+        </div>
+
+        <div class="recom-grid">
+            <!-- OEM / Manufacturer -->
+            <div class="recom-card">
+                <div class="recom-header">
+                    <div class="recom-icon"><i class="fa-solid fa-industry"></i></div>
+                    <h3>Dành cho Nhà Sản Xuất (OEM / Brands)</h3>
+                </div>
+                <ul class="recom-list">
+                    <li><strong>Đẩy mạnh AI Eco Inverter:</strong> Tích hợp vi xử lý AI điều chỉnh công suất linh hoạt theo nhiệt độ môi trường thực tế, cắt giảm tiêu thụ điện năng thêm 15-20%.</li>
+                    <li><strong>Nâng cấp độ bền dàn tản nhiệt:</strong> Phổ cập công nghệ phủ chống ăn mòn Gold Fin / Blue Fin toàn bộ dàn nóng để chống chịu thời tiết nóng ẩm & vùng ven biển Việt Nam.</li>
+                    <li><strong>Tích hợp diệt khuẩn chủ động:</strong> Tiêu chuẩn hóa màng lọc bụi mịn PM2.5 và công nghệ diệt khuẩn Ion/UV ở phân khúc tầm trung để gia tăng sức cạnh tranh.</li>
+                </ul>
+            </div>
+
+            <!-- Retailer -->
+            <div class="recom-card retailer">
+                <div class="recom-header">
+                    <div class="recom-icon"><i class="fa-solid fa-store"></i></div>
+                    <h3>Dành cho Nhà Bán Lẻ (Retailers)</h3>
+                </div>
+                <ul class="recom-list">
+                    <li><strong>Gói dịch vụ "Lắp đặt & Vệ sinh chuẩn 5★":</strong> Khách hàng quan tâm dịch vụ hậu mãi hơn giảm giá thuần túy. Cam kết vật tư chính hãng và tặng voucher bảo dưỡng 1 năm.</li>
+                    <li><strong>Chương trình "Thu cũ Đổi mới":</strong> Kích cầu thay thế các dòng máy lạnh cũ không Inverter tiêu tốn điện năng bằng các mẫu Inverter 2025-2026.</li>
+                    <li><strong>Tối ưu trải nghiệm mua sắm O2O:</strong> Cho phép người dùng so sánh thông số kĩ thuật chi tiết & chi phí tiền điện ước tính theo tháng trực tiếp trên website.</li>
+                </ul>
+            </div>
+
+            <!-- Consumer -->
+            <div class="recom-card consumer">
+                <div class="recom-header">
+                    <div class="recom-icon"><i class="fa-solid fa-user-shield"></i></div>
+                    <h3>Dành cho Người Tiêu Dùng (Consumers)</h3>
+                </div>
+                <ul class="recom-list">
+                    <li><strong>Chọn công suất chuẩn theo diện tích:</strong> 1.0 HP (dưới 15m²), 1.5 HP (15 - 20m²), 2.0 HP (20 - 30m²). Chọn dư 0.5 HP nếu phòng hướng Tây nóng bức.</li>
+                    <li><strong>Ưu tiên dòng máy có Inverter:</strong> Nếu tần suất sử dụng > 5 tiếng/ngày, máy Inverter giúp hoàn vốn chênh lệch giá mua chỉ sau 8 - 12 tháng sử dụng.</li>
+                    <li><strong>Gia đình có em bé & người già:</strong> Chọn máy lạnh có luồng gió Coanda (Daikin) hoặc WindFree (Samsung) để tránh hơi lạnh thổi trực tiếp gây viêm hô hấp.</li>
+                </ul>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <div class="main-container">
+            <p><strong>BÁO CÁO CHIẾN LƯỢC THỊ TRƯỜNG MÁY LẠNH DÂN DỤNG TREO TƯỜNG VIỆT NAM (Q3/2026)</strong></p>
+            <p style="margin-top: 0.4rem; font-size: 0.78rem;">Dữ liệu thu thập từ Điện Máy Xanh (dienmayxanh.com), Điện Máy Chợ Lớn (dienmaycholon.com), MediaMart (mediamart.vn) và Nguyễn Kim (nguyenkim.com).</p>
+            <p style="margin-top: 0.4rem; color: #64748B; font-size: 0.75rem;">Mẫu thiết kế báo cáo tuân thủ nguyên tắc trình bày McKinsey Dashboard & Corporate Intelligence Standard.</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript Data & Logic -->
+    <script>
+        // Data Store for Best Selling AC Models
+        const acData = [
+            {
+                id: 1,
+                name: "Daikin Inverter 1 HP FTKB25XVMV",
+                brand: "Daikin",
+                capacity: "1.0 HP",
+                inverter: "Inverter",
+                retailer: "DMX",
+                retBadge: "ret-dmx",
+                retName: "Điện Máy Xanh",
+                priceSelling: 9490000,
+                priceMrp: 10990000,
+                rating: 4.8,
+                reviews: 1420,
+                priceSegment: "MID",
+                pros: ["Luồng gió Coanda dịu nhẹ không buốt", "Phin lọc Enzyme Blue + PM2.5 kháng khuẩn", "Dàn tản nhiệt microchannel chống ăn mòn"],
+                cons: ["Giá cao hơn trung bình cùng phân khúc", "Thiết kế đơn giản cổ điển"],
+                url: "https://www.dienmayxanh.com/may-lanh/daikin-ftkb25xvmv"
+            },
+            {
+                id: 2,
+                name: "Daikin Inverter 1.5 HP FTKB35XVMV",
+                brand: "Daikin",
+                capacity: "1.5 HP",
+                inverter: "Inverter",
+                retailer: "DMX",
+                retBadge: "ret-dmx",
+                retName: "Điện Máy Xanh",
+                priceSelling: 11890000,
+                priceMrp: 13490000,
+                rating: 4.8,
+                reviews: 980,
+                priceSegment: "MID",
+                pros: ["Làm lạnh nhanh Powerful 12.000 BTU", "Vận hành cực êm chỉ 19dB", "Tiết kiệm điện chuẩn 5 sao (CSPF 5.23)"],
+                cons: ["Cần lắp đặt chuẩn hút chân không chuyên nghiệp"],
+                url: "https://www.dienmayxanh.com/may-lanh/daikin-ftkb35xvmv"
+            },
+            {
+                id: 3,
+                name: "Panasonic Inverter 1 HP RU9AKH-8",
+                brand: "Panasonic",
+                capacity: "1.0 HP",
+                inverter: "Inverter",
+                retailer: "NguyenKim",
+                retBadge: "ret-nk",
+                retName: "Nguyễn Kim",
+                priceSelling: 10290000,
+                priceMrp: 11890000,
+                rating: 4.9,
+                reviews: 1150,
+                priceSegment: "MID",
+                pros: ["Công nghệ Nanoe-G lọc bụi mịn PM2.5 99%", "Cảm biến Eco tích hợp trí tuệ nhân tạo AI", "Cánh đảo gió Aerowings kép thổi xa 15m"],
+                cons: ["Điều khiển qua Wi-Fi cần trang bị thêm phụ kiện tùy chọn"],
+                url: "https://www.nguyenkim.com/may-lanh-panasonic-inverter-1-hp-cu-cs-ru9akh-8.html"
+            },
+            {
+                id: 4,
+                name: "Panasonic Inverter 1.5 HP RU12AKH-8",
+                brand: "Panasonic",
+                capacity: "1.5 HP",
+                inverter: "Inverter",
+                retailer: "NguyenKim",
+                retBadge: "ret-nk",
+                retName: "Nguyễn Kim",
+                priceSelling: 12990000,
+                priceMrp: 14790000,
+                rating: 4.9,
+                reviews: 870,
+                priceSegment: "HIGH",
+                pros: ["Công nghệ Nanoe-X diệt khuẩn 99.9% & khử mùi", "Làm lạnh siêu nhanh Powerful", "Độ bền dàn nóng chống thời tiết cao"],
+                cons: ["Chi phí đầu tư ban đầu khá cao"],
+                url: "https://www.nguyenkim.com/may-lanh-panasonic-inverter-1.5-hp-cu-cs-ru12akh-8.html"
+            },
+            {
+                id: 5,
+                name: "Casper Inverter 1 HP TC-09IS35",
+                brand: "Casper",
+                capacity: "1.0 HP",
+                inverter: "Inverter",
+                retailer: "DMCL",
+                retBadge: "ret-dmcl",
+                retName: "Điện Máy Chợ Lớn",
+                priceSelling: 5490000,
+                priceMrp: 6990000,
+                rating: 4.6,
+                reviews: 2310,
+                priceSegment: "BUDGET",
+                pros: ["Giá rẻ nhất phân khúc Inverter 9.000 BTU", "Chế độ Turbo làm lạnh tức thì 30 giây", "Tự làm sạch dàn lạnh iClean thông minh"],
+                cons: ["Vỏ nhựa dễ bám bụi", "Độ ồn dàn nóng nhỉnh hơn Daikin"],
+                url: "https://dienmaycholon.com/may-lanh/may-lanh-casper-inverter-1-hp-tc09is35"
+            },
+            {
+                id: 6,
+                name: "Casper Inverter 1.5 HP TC-12IS35",
+                brand: "Casper",
+                capacity: "1.5 HP",
+                inverter: "Inverter",
+                retailer: "DMCL",
+                retBadge: "ret-dmcl",
+                retName: "Điện Máy Chợ Lớn",
+                priceSelling: 6690000,
+                priceMrp: 8290000,
+                rating: 4.6,
+                reviews: 1640,
+                priceSegment: "BUDGET",
+                pros: ["Công suất 12.000 BTU giá mềm vượt trội", "Dàn tản nhiệt mạ vàng GoldFin siêu bền", "Bảo hành máy nén tới 12 năm"],
+                cons: ["Không có tính năng lọc bụi mịn chuyên sâu"],
+                url: "https://dienmaycholon.com/may-lanh/may-lanh-casper-inverter-15-hp-tc12is35"
+            },
+            {
+                id: 7,
+                name: "LG Dual Inverter 1 HP V10WIN",
+                brand: "LG",
+                capacity: "1.0 HP",
+                inverter: "Dual Inverter",
+                retailer: "DMX",
+                retBadge: "ret-dmx",
+                retName: "Điện Máy Xanh",
+                priceSelling: 7490000,
+                priceMrp: 9190000,
+                rating: 4.7,
+                reviews: 1530,
+                priceSegment: "MID",
+                pros: ["Máy nén Dual Inverter tiết kiệm điện đến 70%", "Màng lọc sơ cấp kéo dài tuổi thọ", "Dàn tản nhiệt GoldFin chống ăn mòn"],
+                cons: ["Remote thiết kế phím bấm hơi nhỏ"],
+                url: "https://www.dienmayxanh.com/may-lanh/lg-v10win"
+            },
+            {
+                id: 8,
+                name: "LG Dual Inverter 1.5 HP V13WIN",
+                brand: "LG",
+                capacity: "1.5 HP",
+                inverter: "Dual Inverter",
+                retailer: "DMX",
+                retBadge: "ret-dmx",
+                retName: "Điện Máy Xanh",
+                priceSelling: 9290000,
+                priceMrp: 10890000,
+                rating: 4.7,
+                reviews: 920,
+                priceSegment: "MID",
+                pros: ["Kết nối Wi-Fi điều khiển thông minh ThinQ", "Làm lạnh tức thì Jet Cool", "Tự động làm sạch dàn lạnh Plasmaster Ionizer"],
+                cons: ["Cần vệ sinh phin lọc định kỳ 3 tháng/lần"],
+                url: "https://www.dienmayxanh.com/may-lanh/lg-v13win"
+            },
+            {
+                id: 9,
+                name: "Samsung WindFree Inverter 1 HP AR10CYHAAWKNSV",
+                brand: "Samsung",
+                capacity: "1.0 HP",
+                inverter: "Inverter Boost",
+                retailer: "MediaMart",
+                retBadge: "ret-mm",
+                retName: "MediaMart",
+                priceSelling: 7890000,
+                priceMrp: 10490000,
+                rating: 4.6,
+                reviews: 840,
+                priceSegment: "MID",
+                pros: ["Công nghệ WindFree 23.000 lỗ khí không gió buốt", "Digital Inverter Boost tiết kiệm điện 73%", "Lọc khuẩn 99% & tự làm sạch Freeze Wash"],
+                cons: ["Tấm lọc WindFree cần xịt rửa thường xuyên"],
+                url: "https://mediamart.vn/dieu-hoa-nhiet-do/dieu-hoa-samsung-inverter-9000-btu-ar10cyhaawknsv"
+            },
+            {
+                id: 10,
+                name: "Funiki Inverter 1 HP HIC09TMU",
+                brand: "Funiki",
+                capacity: "1.0 HP",
+                inverter: "Inverter",
+                retailer: "MediaMart",
+                retBadge: "ret-mm",
+                retName: "MediaMart",
+                priceSelling: 5190000,
+                priceMrp: 6490000,
+                rating: 4.5,
+                reviews: 1120,
+                priceSegment: "BUDGET",
+                pros: ["Thương hiệu Việt Hòa Phát nồi đồng cối đá", "Làm lạnh nhanh Turbo nhanh chóng", "Dàn tản nhiệt mạ lớp bảo vệ chống nấm mốc"],
+                cons: ["Kiểu dáng chưa thực sự tinh tế", "Không có kết nối app"],
+                url: "https://mediamart.vn/dieu-hoa-nhiet-do/dieu-hoa-funiki-inverter-9000btu-hic09tmu"
+            },
+            {
+                id: 11,
+                name: "Toshiba Inverter 1 HP RAS-H10Z1KCVG-V",
+                brand: "Toshiba",
+                capacity: "1.0 HP",
+                inverter: "Hybrid Inverter",
+                retailer: "NguyenKim",
+                retBadge: "ret-nk",
+                retName: "Nguyễn Kim",
+                priceSelling: 8990000,
+                priceMrp: 10290000,
+                rating: 4.7,
+                reviews: 650,
+                priceSegment: "MID",
+                pros: ["Công nghệ chống bám bẩn Magic Coil đỉnh cao", "Màng lọc Ultra Pure lọc bụi mịn PM2.5 94%", "Chế độ Eco kết hợp Hybrid Inverter siêu tiết kiệm"],
+                cons: ["Giá cao hơn Casper/Funiki khoảng 40%"],
+                url: "https://www.nguyenkim.com/may-lanh-toshiba-inverter-1-hp-ras-h10z1kcvg-v.html"
+            },
+            {
+                id: 12,
+                name: "Gree Inverter 1 HP GWC09PB-K3D0P4",
+                brand: "Gree",
+                capacity: "1.0 HP",
+                inverter: "G10 Inverter",
+                retailer: "DMCL",
+                retBadge: "ret-dmcl",
+                retName: "Điện Máy Chợ Lớn",
+                priceSelling: 6990000,
+                priceMrp: 8190000,
+                rating: 4.6,
+                reviews: 790,
+                priceSegment: "BUDGET",
+                pros: ["Công nghệ Real Cool làm lạnh tự nhiên mát sâu", "Màng lọc Cold Plasma diệt vi khuẩn tiêu chuẩn", "Máy vận hành êm ái dưới 21dB"],
+                cons: ["Độ nhận diện thương hiệu chưa bằng Daikin/Panasonic"],
+                url: "https://dienmaycholon.com/may-lanh/may-lanh-gree-inverter-1-hp-gwc09pbk3d0p4"
+            },
+            {
+                id: 13,
+                name: "Sharp Inverter 1 HP AH-X10ZEW",
+                brand: "Sharp",
+                capacity: "1.0 HP",
+                inverter: "J-Tech Inverter",
+                retailer: "DMX",
+                retBadge: "ret-dmx",
+                retName: "Điện Máy Xanh",
+                priceSelling: 6890000,
+                priceMrp: 8490000,
+                rating: 4.6,
+                reviews: 620,
+                priceSegment: "BUDGET",
+                pros: ["Chế độ Super Jet giảm ngay 5°C trong 5 phút", "Công nghệ Plasmacluster Ion diệt nấm mốc độc quyền", "Lưới lọc polypropylene giữ bụi bẩn"],
+                cons: ["Đảo gió 4 chiều chỉ có trên model cao cấp hơn"],
+                url: "https://www.dienmayxanh.com/may-lanh/sharp-ah-x10zew"
+            },
+            {
+                id: 14,
+                name: "Daikin Inverter 2 HP FTKB50XVMV",
+                brand: "Daikin",
+                capacity: "2.0 HP",
+                inverter: "Inverter",
+                retailer: "DMX",
+                retBadge: "ret-dmx",
+                retName: "Điện Máy Xanh",
+                priceSelling: 18490000,
+                priceMrp: 20990000,
+                rating: 4.8,
+                reviews: 410,
+                priceSegment: "PREMIUM",
+                pros: ["Công suất mạnh mẽ 18.000 BTU cho phòng 20-30m²", "Dàn lạnh Coanda lớn thổi hơi lạnh phủ đều phòng", "Tiết kiệm điện ấn tượng cho máy công suất lớn"],
+                cons: ["Kích thước dàn lạnh khá to"],
+                url: "https://www.dienmayxanh.com/may-lanh/daikin-ftkb50xvmv"
+            },
+            {
+                id: 15,
+                name: "Panasonic Inverter Premium 1 HP XU9ZKH-8",
+                brand: "Panasonic",
+                capacity: "1.0 HP",
+                inverter: "Inverter Premium",
+                retailer: "NguyenKim",
+                retBadge: "ret-nk",
+                retName: "Nguyễn Kim",
+                priceSelling: 14290000,
+                priceMrp: 16190000,
+                rating: 4.95,
+                reviews: 380,
+                priceSegment: "HIGH",
+                pros: ["Nanoe-X thế hệ 3 diệt khuẩn gấp 10 lần", "Cảm biến độ ẩm Humidity Sensor giữ ẩm cho da", "Wi-Fi tích hợp sẵn điều khiển từ xa mượt mà"],
+                cons: ["Giá ở phân khúc cao cấp"],
+                url: "https://www.nguyenkim.com/may-lanh-panasonic-inverter-1-hp-cu-cs-xu9zkh-8.html"
+            },
+            {
+                id: 16,
+                name: "Midea Inverter 1 HP MSAG-10CRDN8",
+                brand: "Midea",
+                capacity: "1.0 HP",
+                inverter: "Inverter Quattro",
+                retailer: "MediaMart",
+                retBadge: "ret-mm",
+                retName: "MediaMart",
+                priceSelling: 4990000,
+                priceMrp: 6290000,
+                rating: 4.4,
+                reviews: 950,
+                priceSegment: "BUDGET",
+                pros: ["Giá rẻ cạnh tranh hàng đầu thị trường", "Công nghệ GearShift tùy chỉnh 3 mức công suất", "Lớp mạ Golden Fin bảo vệ dàn tản nhiệt"],
+                cons: ["Độ bền máy nén ở mức trung bình"],
+                url: "https://mediamart.vn/dieu-hoa-nhiet-do/dieu-hoa-midea-inverter-9000btu-msag10crdn8"
+            },
+            {
+                id: 17,
+                name: "Aqua Inverter 1 HP AQA-KCRV10TK",
+                brand: "Aqua",
+                capacity: "1.0 HP",
+                inverter: "PID Inverter",
+                retailer: "DMCL",
+                retBadge: "ret-dmcl",
+                retName: "Điện Máy Chợ Lớn",
+                priceSelling: 5890000,
+                priceMrp: 7290000,
+                rating: 4.5,
+                reviews: 510,
+                priceSegment: "BUDGET",
+                pros: ["Tự làm sạch băng tuyết 3 bước Self-Clean", "Công nghệ PID Inverter tiết kiệm điện 63%", "Dàn tản nhiệt BlueFin chống ăn mòn muối biển"],
+                cons: ["Hệ thống trạm bảo hành ở các tỉnh nhỏ chưa phủ dày"],
+                url: "https://dienmaycholon.com/may-lanh/may-lanh-aqua-inverter-1-hp-aqakcrv10tk"
+            },
+            {
+                id: 18,
+                name: "LG UVnano Inverter 1 HP V10APFP",
+                brand: "LG",
+                capacity: "1.0 HP",
+                inverter: "Dual Inverter",
+                retailer: "DMX",
+                retBadge: "ret-dmx",
+                retName: "Điện Máy Xanh",
+                priceSelling: 10990000,
+                priceMrp: 12490000,
+                rating: 4.85,
+                reviews: 470,
+                priceSegment: "MID",
+                pros: ["Đèn UVnano diệt 99.99% vi khuẩn tại quạt gió", "Cảm biến bụi mịn PM1.0 hiển thị chất lượng không khí", "Phát Ion lọc sạch không gian phòng"],
+                cons: ["Cần đọc kỹ hướng dẫn để sử dụng hết tính năng app"],
+                url: "https://www.dienmayxanh.com/may-lanh/lg-v10apfp"
+            },
+            {
+                id: 19,
+                name: "Daikin Inverter 1.5 HP ATKF35XVMV",
+                brand: "Daikin",
+                capacity: "1.5 HP",
+                inverter: "Inverter",
+                retailer: "NguyenKim",
+                retBadge: "ret-nk",
+                retName: "Nguyễn Kim",
+                priceSelling: 12490000,
+                priceMrp: 13990000,
+                rating: 4.8,
+                reviews: 730,
+                priceSegment: "HIGH",
+                pros: ["Dòng máy nâng cấp 2025 phin lọc Enzyme Blue", "Chịu được điện áp biến động từ 150V đến 264V", "Tiết kiệm điện năng vượt trội"],
+                cons: ["Giá không giảm nhiều vào mùa thấp điểm"],
+                url: "https://www.nguyenkim.com/may-lanh-daikin-inverter-1.5-hp-atkf35xvmv.html"
+            },
+            {
+                id: 20,
+                name: "Casper Non-Inverter 1 HP KC-09FC32",
+                brand: "Casper",
+                capacity: "1.0 HP",
+                inverter: "Non-Inverter",
+                retailer: "DMCL",
+                retBadge: "ret-dmcl",
+                retName: "Điện Máy Chợ Lớn",
+                priceSelling: 4490000,
+                priceMrp: 5690000,
+                rating: 4.5,
+                reviews: 3100,
+                priceSegment: "BUDGET",
+                pros: ["Mức giá cực kỳ rẻ cho sinh viên & phòng trọ", "Làm lạnh tức thì không lo chờ đợi", "Dàn tản nhiệt đồng mạ vàng bền bỉ"],
+                cons: ["Tốn điện hơn dòng Inverter nếu chạy >6h/ngày"],
+                url: "https://dienmaycholon.com/may-lanh/may-lanh-casper-1-hp-kc09fc32"
+            }
+        ];
+
+        // Format Price Utility
+        function formatVND(val) {
+            return new Intl.NumberFormat('vi-VN').format(val) + ' ₫';
+        }
+
+        // Render Product Table
+        function renderTable(data) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 2rem; color: var(--mck-text-muted);">Không tìm thấy sản phẩm máy lạnh nào phù hợp với bộ lọc hiện tại.</td></tr>`;
+                document.getElementById('recordCount').innerText = '0';
+                return;
+            }
+
+            document.getElementById('recordCount').innerText = data.length;
+
+            data.forEach((item, index) => {
+                const brandClass = 'brand-' + item.brand.toLowerCase();
+                const prosHTML = item.pros.map(p => `<li><i class="fa-solid fa-circle-check"></i> ${p}</li>`).join('');
+                const consHTML = item.cons.map(c => `<li><i class="fa-solid fa-circle-exclamation"></i> ${c}</li>`).join('');
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight: 700; color: var(--mck-navy); text-align: center;">${index + 1}</td>
+                    <td>
+                        <strong style="color: var(--mck-navy); font-size: 0.86rem;">${item.name}</strong>
+                    </td>
+                    <td><span class="badge-brand ${brandClass}">${item.brand}</span></td>
+                    <td><span class="badge-retailer ${item.retBadge}">${item.retName}</span></td>
+                    <td>
+                        <div style="font-weight: 600;">${item.capacity}</div>
+                        <div style="font-size: 0.72rem; color: var(--mck-teal); font-weight: 600;">${item.inverter}</div>
+                    </td>
+                    <td>
+                        <div class="price-selling">${formatVND(item.priceSelling)}</div>
+                        <div class="price-mrp">${formatVND(item.priceMrp)}</div>
+                    </td>
+                    <td>
+                        <div class="star-rating"><i class="fa-solid fa-star"></i> ${item.rating}</div>
+                        <div class="review-count">(${item.reviews.toLocaleString('vi-VN')} đánh giá)</div>
+                    </td>
+                    <td><ul class="pro-list">${prosHTML}</ul></td>
+                    <td><ul class="con-list">${consHTML}</ul></td>
+                    <td>
+                        <a href="${item.url}" target="_blank" class="btn-link">
+                            Xem chi tiết <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        </a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Apply Filters
+        function applyFilters() {
+            const brand = document.getElementById('filterBrand').value;
+            const capacity = document.getElementById('filterCapacity').value;
+            const priceSeg = document.getElementById('filterPrice').value;
+            const retailer = document.getElementById('filterRetailer').value;
+            const search = document.getElementById('tableSearch').value.toLowerCase().trim();
+
+            const filtered = acData.filter(item => {
+                // Brand Filter
+                if (brand !== 'ALL' && item.brand !== brand) return false;
+
+                // Capacity Filter
+                if (capacity !== 'ALL' && item.capacity !== capacity) return false;
+
+                // Retailer Filter
+                if (retailer !== 'ALL' && item.retailer !== retailer) return false;
+
+                // Price Segment Filter
+                if (priceSeg !== 'ALL') {
+                    if (priceSeg === 'BUDGET' && item.priceSelling >= 7000000) return false;
+                    if (priceSeg === 'MID' && (item.priceSelling < 7000000 || item.priceSelling > 12000000)) return false;
+                    if (priceSeg === 'HIGH' && (item.priceSelling < 12000000 || item.priceSelling > 18000000)) return false;
+                    if (priceSeg === 'PREMIUM' && item.priceSelling <= 18000000) return false;
+                }
+
+                // Search Box Filter
+                if (search !== '') {
+                    const matchText = (item.name + ' ' + item.brand + ' ' + item.capacity + ' ' + item.retName + ' ' + item.pros.join(' ')).toLowerCase();
+                    if (!matchText.includes(search)) return false;
+                }
+
+                return true;
+            });
+
+            renderTable(filtered);
+            updateKPISummary(filtered);
+        }
+
+        // Dynamic KPI Update
+        function updateKPISummary(data) {
+            document.getElementById('kpiTotalModels').innerText = data.length;
+            if (data.length > 0) {
+                const avg = Math.round(data.reduce((sum, i) => sum + i.priceSelling, 0) / data.length);
+                document.getElementById('kpiAvgPrice').innerText = formatVND(avg);
+            } else {
+                document.getElementById('kpiAvgPrice').innerText = "0 ₫";
+            }
+        }
+
+        // Initialize Charts (Chart.js)
+        function initCharts() {
+            // Chart 1: Brand Market Share Doughnut Chart
+            const ctxBrand = document.getElementById('chartBrandShare').getContext('2d');
+            new Chart(ctxBrand, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Daikin', 'Panasonic', 'Casper', 'LG', 'Samsung', 'Funiki', 'Toshiba', 'Gree/Midea/Aqua/Sharp'],
+                    datasets: [{
+                        data: [24.5, 21.8, 16.2, 11.5, 8.4, 6.8, 5.2, 5.6],
+                        backgroundColor: [
+                            '#0284C7', // Daikin Blue
+                            '#7C3AED', // Panasonic Purple
+                            '#D97706', // Casper Amber
+                            '#A50034', // LG Red
+                            '#3730A3', // Samsung Indigo
+                            '#15803D', // Funiki Green
+                            '#BE185D', // Toshiba Pink
+                            '#64748B'  // Others Slate
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#FFFFFF'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                font: { family: 'Plus Jakarta Sans', size: 11 },
+                                padding: 12,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.label}: ${context.raw}% thị phần`;
+                                }
+                            }
+                        }
+                    },
+                    cutout: '65%'
+                }
+            });
+
+            // Chart 2: Capacity Share Bar Chart
+            const ctxCap = document.getElementById('chartCapacityShare').getContext('2d');
+            new Chart(ctxCap, {
+                type: 'bar',
+                data: {
+                    labels: ['1.0 HP (~9.000 BTU)', '1.5 HP (~12.000 BTU)', '2.0 HP (~18.000 BTU)', '2.5 HP (~24.000 BTU)'],
+                    datasets: [{
+                        label: 'Tỷ lệ Lựa chọn (%)',
+                        data: [46.8, 31.6, 14.5, 7.1],
+                        backgroundColor: ['#0EA5E9', '#0284C7', '#0369A1', '#075985'],
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => ` Tỷ lệ: ${ctx.raw}% người dùng`
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 60,
+                            ticks: { callback: v => v + '%' }
+                        }
+                    }
+                }
+            });
+
+            // Chart 3: Retailer Price Segments Stacked Horizontal Bar
+            const ctxPrice = document.getElementById('chartPriceRetailer').getContext('2d');
+            new Chart(ctxPrice, {
+                type: 'bar',
+                data: {
+                    labels: ['Điện Máy Xanh', 'Điện Máy Chợ Lớn', 'MediaMart', 'Nguyễn Kim'],
+                    datasets: [
+                        { label: 'Giá rẻ (< 7Tr)', data: [28, 42, 45, 18], backgroundColor: '#F59E0B' },
+                        { label: 'Tầm trung (7-12Tr)', data: [48, 40, 38, 45], backgroundColor: '#0EA5E9' },
+                        { label: 'Cao cấp (12-18Tr)', data: [18, 14, 12, 27], backgroundColor: '#8B5CF6' },
+                        { label: 'Siêu cao cấp (>18Tr)', data: [6, 4, 5, 10], backgroundColor: '#A50034' }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 11 } } }
+                    },
+                    scales: {
+                        x: { stacked: true, max: 100, ticks: { callback: v => v + '%' } },
+                        y: { stacked: true }
+                    }
+                }
+            });
+
+            // Chart 4: Rating vs Price Grouped Comparison
+            const ctxRating = document.getElementById('chartRatingPrice').getContext('2d');
+            new Chart(ctxRating, {
+                type: 'bar',
+                data: {
+                    labels: ['Daikin', 'Panasonic', 'LG', 'Samsung', 'Casper', 'Toshiba', 'Funiki'],
+                    datasets: [
+                        {
+                            label: 'Điểm Hài lòng (Thang 5★)',
+                            data: [4.82, 4.88, 4.72, 4.65, 4.58, 4.70, 4.48],
+                            backgroundColor: '#10B981',
+                            yAxisID: 'yRating'
+                        },
+                        {
+                            label: 'Giá Trung bình (Triệu ₫)',
+                            data: [12.8, 13.5, 9.4, 8.9, 5.9, 9.8, 5.4],
+                            backgroundColor: '#0EA5E9',
+                            yAxisID: 'yPrice'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { font: { size: 11 } } }
+                    },
+                    scales: {
+                        yRating: {
+                            type: 'linear',
+                            position: 'left',
+                            min: 4.0,
+                            max: 5.0,
+                            title: { display: true, text: 'Điểm Đánh giá (★)' }
+                        },
+                        yPrice: {
+                            type: 'linear',
+                            position: 'right',
+                            min: 0,
+                            max: 16,
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'Giá (Triệu VNĐ)' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // On Page Load
+        window.addEventListener('DOMContentLoaded', () => {
+            renderTable(acData);
+            initCharts();
+        });
+    </script>
+</body>
+</html>

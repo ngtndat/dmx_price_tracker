@@ -1,0 +1,21 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+*.log
+.DS_Store
+
+# Ignore credentials and sensitive key JSON files
+*client_secret*.json
+graphic-mission*.json
+google-workspace-mcp/credentials/
+
+# Ignore large media & temporary files from youtube project
+youtube/output/
+youtube/temp/
+youtube/*.mp4
+*.mp4
+*.wav
+*.avi
+*.mkv

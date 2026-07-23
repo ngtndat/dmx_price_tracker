@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PricePulse – Theo Dõi Giá Shopee, Lazada, TikTok, Traveloka</title>
+    <meta name="description" content="Theo dõi biến động giá sản phẩm trên Shopee, Lazada, TikTok Shop, Traveloka, Trip.com tự động mỗi 6 giờ. Nhận thông báo khi giá giảm, tiết kiệm thông minh hơn.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <script>
+        // Injected by server or set manually
+        const GOOGLE_CLIENT_ID = "";
+    </script>
+</head>
+<body>
+    <!-- Ambient Background -->
+    <div class="ambient-bg">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- ===================== TOP AD BANNER ===================== -->
+    <div class="top-ad-bar" id="top-ad-bar">
+        <div class="top-ad-inner">
+            <span class="ad-pill">TÀI TRỢ</span>
+            <span class="top-ad-text">
+                🔥 <strong>AccessTrade</strong> – Kiếm hoa hồng từ Shopee, Lazada, TikTok Shop mỗi khi người dùng mua qua link của bạn!
+                <a href="https://accesstrade.vn" target="_blank" class="top-ad-link">Đăng ký miễn phí →</a>
+            </span>
+        </div>
+        <button class="top-ad-close" onclick="document.getElementById('top-ad-bar').style.display='none'" aria-label="Đóng quảng cáo">✕</button>
+    </div>
+
+    <!-- ===================== HEADER ===================== -->
+    <header class="site-header">
+        <div class="header-inner">
+            <!-- Logo -->
+            <a class="logo" href="/">
+                <div class="logo-icon">
+                    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+                        <path d="M4 20 L8 12 L12 16 L16 8 L20 14 L24 6" stroke="url(#grad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <defs>
+                            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" style="stop-color:#818cf8"/>
+                                <stop offset="100%" style="stop-color:#38bdf8"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <span class="logo-name">Price<em>Pulse</em></span>
+                    <span class="logo-tagline">Smart Price Tracker</span>
+                </div>
+            </a>
+
+            <!-- Header Right: Scheduler status + Auth -->
+            <div class="header-right">
+                <div class="scheduler-badge" id="scheduler-badge" title="Tự động cập nhật giá mỗi 6 giờ (GMT+7)">
+                    <span class="sched-dot"></span>
+                    <span class="sched-text">Cập nhật 6h/lần</span>
+                </div>
+
+                <!-- Sandbox login (dev mode) -->
+                <div class="sandbox-wrap" id="sandbox-wrap">
+                    <select id="sandbox-user" onchange="handleSandboxLogin(this.value)" class="sandbox-select">
+                        <option value="">🧪 Demo Login</option>
+                        <option value="user_a">👤 Demo User A</option>
+                        <option value="user_b">👤 Demo User B</option>
+                        <option value="vip_buyer">⭐ VIP Buyer</option>
+                    </select>
+                </div>
+
+                <!-- Google Sign-In button rendered here -->
+                <div id="google-signin-btn"></div>
+
+                <!-- Logged-in user profile -->
+                <div class="user-chip" id="user-chip" style="display:none;">
+                    <img id="user-avatar" src="" alt="Avatar" class="user-avatar">
+                    <div class="user-info-mini">
+                        <span class="user-name-mini" id="user-display-name"></span>
+                    </div>
+                    <button class="btn-logout-mini" onclick="logout()" title="Đăng xuất">↩</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ===================== MAIN LAYOUT ===================== -->
+    <div class="page-layout">
+
+        <!-- ===== SIDEBAR ===== -->
+        <aside class="sidebar">
+            <!-- Stats Card -->
+            <div class="card stats-card" id="stats-card" style="display:none;">
+                <h3 class="card-title">📊 Tổng Quan</h3>
+                <div class="stat-row">
+                    <div class="stat-item">
+                        <span class="stat-num" id="stat-total">0</span>
+                        <span class="stat-label">Đang theo dõi</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-num text-green" id="stat-at-lowest">0</span>
+                        <span class="stat-label">Giá thấp nhất</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-num text-red" id="stat-dead">0</span>
+                        <span class="stat-label">Link die</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-num text-purple" id="stat-clicks">0</span>
+                        <span class="stat-label">Affiliate clicks</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Affiliate Promo Card -->
+            <div class="card affiliate-promo-card">
+                <div class="aff-promo-badge">💰 KIẾM TIỀN</div>
+                <h4 class="aff-promo-title">Biến link theo dõi thành thu nhập!</h4>
+                <p class="aff-promo-desc">Đăng ký AccessTrade miễn phí và nhận hoa hồng 3–8% mỗi đơn hàng khi người dùng mua qua link của bạn trên Shopee, Lazada, TikTok Shop.</p>
+                <div class="aff-networks">
+                    <span class="platform-chip shopee">Shopee</span>
+                    <span class="platform-chip lazada">Lazada</span>
+                    <span class="platform-chip tiktok">TikTok</span>
+                    <span class="platform-chip traveloka">Traveloka</span>
+                </div>
+                <a href="https://accesstrade.vn" target="_blank" class="btn-aff-promo" id="btn-accesstrade-promo">
+                    Đăng Ký AccessTrade →
+                </a>
+            </div>
+
+            <!-- Sidebar Ad (300x300) -->
+            <div class="card ad-card">
+                <span class="ad-label">QUẢNG CÁO</span>
+                <div class="ad-content-block">
+                    <div class="ad-icon-big">🛒</div>
+                    <h4 class="ad-product-name">Shopee Sale Siêu Rẻ</h4>
+                    <p class="ad-product-desc">Flash sale mỗi ngày, giảm đến 70%. Đừng bỏ lỡ deal hot hôm nay!</p>
+                    <div class="ad-price-badge">
+                        <del>850.000đ</del>
+                        <strong>299.000đ</strong>
+                        <span class="discount-badge">-65%</span>
+                    </div>
+                    <a href="https://shopee.vn" target="_blank" class="btn-ad-buy">Xem Deal →</a>
+                </div>
+            </div>
+
+            <!-- Platform Coverage -->
+            <div class="card platforms-card">
+                <h4 class="card-title">🌐 Nền Tảng Hỗ Trợ</h4>
+                <div class="platforms-list">
+                    <div class="plt-item"><span class="plt-dot shopee"></span> Shopee</div>
+                    <div class="plt-item"><span class="plt-dot lazada"></span> Lazada</div>
+                    <div class="plt-item"><span class="plt-dot tiktok"></span> TikTok Shop</div>
+                    <div class="plt-item"><span class="plt-dot traveloka"></span> Traveloka</div>
+                    <div class="plt-item"><span class="plt-dot trip"></span> Trip.com</div>
+                    <div class="plt-item"><span class="plt-dot sendo"></span> Sendo</div>
+                    <div class="plt-item"><span class="plt-dot thegioididong"></span> TGDĐ</div>
+                    <div class="plt-item"><span class="plt-dot tiki"></span> Tiki</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ===== MAIN CONTENT ===== -->
+        <main class="main-content">
+
+            <!-- Login Prompt -->
+            <div class="card login-prompt" id="login-prompt">
+                <div class="login-prompt-inner">
+                    <div class="login-hero-icon">📈</div>
+                    <h2>Theo Dõi Giá Thông Minh, <em>Mua Đúng Thời Điểm</em></h2>
+                    <p>Dán link sản phẩm từ Shopee, Lazada, TikTok Shop, Traveloka... PricePulse tự động theo dõi và thông báo khi giá giảm. Cập nhật mỗi 6 giờ theo giờ Việt Nam.</p>
+                    <ul class="feature-list">
+                        <li>⏰ Cập nhật tự động lúc 0h, 6h, 12h, 18h (GMT+7)</li>
+                        <li>📉 Đồ thị lịch sử giá trực quan</li>
+                        <li>🔗 Gợi ý link affiliate – kiếm hoa hồng</li>
+                        <li>☠️ Tự động ngừng khi link sản phẩm die</li>
+                    </ul>
+                    <p class="login-sub">Đăng nhập bằng Google để bắt đầu – <strong>miễn phí hoàn toàn</strong></p>
+                </div>
+            </div>
+
+            <!-- Track Input Panel (logged in) -->
+            <div class="card input-panel" id="input-panel" style="display:none;">
+                <div class="input-panel-header">
+                    <h3>➕ Thêm Sản Phẩm Theo Dõi</h3>
+                    <p>Dán link sản phẩm từ Shopee, Lazada, TikTok, Traveloka, Trip.com...</p>
+                </div>
+
+                <form id="track-form" onsubmit="handleTrackProduct(event)">
+                    <div class="track-input-row">
+                        <div class="url-input-wrap">
+                            <span class="url-prefix-icon">🔗</span>
+                            <input
+                                type="url"
+                                id="product-url"
+                                placeholder="https://shopee.vn/... hoặc https://lazada.vn/..."
+                                autocomplete="off"
+                                spellcheck="false"
+                                required
+                            >
+                            <span class="platform-detect-badge" id="platform-detect-badge"></span>
+                        </div>
+                        <button type="submit" class="btn-track" id="btn-track">
+                            <span id="btn-track-text">Theo Dõi Giá</span>
+                            <span class="btn-spinner" id="btn-spinner" style="display:none;"></span>
+                        </button>
+                    </div>
+                </form>
+
+                <div class="example-links">
+                    <span class="example-label">Link mẫu:</span>
+                    <button onclick="fillExample('shopee')" class="example-chip shopee">🛒 Shopee</button>
+                    <button onclick="fillExample('lazada')" class="example-chip lazada">🟠 Lazada</button>
+                    <button onclick="fillExample('tiktok')" class="example-chip tiktok">🎵 TikTok</button>
+                    <button onclick="fillExample('traveloka')" class="example-chip traveloka">✈️ Traveloka</button>
+                    <button onclick="fillExample('trip')" class="example-chip trip">🏨 Trip.com</button>
+                </div>
+
+                <!-- Affiliate tip banner inside form -->
+                <div class="aff-tip-strip" id="aff-tip-strip" style="display:none;">
+                    <span class="aff-tip-icon">💡</span>
+                    <span id="aff-tip-text"></span>
+                </div>
+            </div>
+
+            <!-- Toast Notification -->
+            <div class="toast" id="toast" role="alert" aria-live="polite"></div>
+
+            <!-- Products Section -->
+            <section class="products-section" id="products-section" style="display:none;">
+                <!-- Tab Bar -->
+                <div class="tab-bar">
+                    <button class="tab active" data-tab="all" onclick="switchTab('all')">
+                        🗂️ Tất Cả <span class="tab-badge" id="tab-badge-all">0</span>
+                    </button>
+                    <button class="tab" data-tab="deal" onclick="switchTab('deal')">
+                        🔥 Đang Giảm <span class="tab-badge deal" id="tab-badge-deal">0</span>
+                    </button>
+                    <button class="tab" data-tab="dead" onclick="switchTab('dead')">
+                        ☠️ Link Die <span class="tab-badge dead" id="tab-badge-dead">0</span>
+                    </button>
+                </div>
+
+                <!-- Empty State -->
+                <div class="empty-state" id="empty-state" style="display:none;">
+                    <div class="empty-icon">📦</div>
+                    <h3>Chưa có sản phẩm nào!</h3>
+                    <p>Dán link sản phẩm từ Shopee, Lazada, TikTok... vào ô phía trên để bắt đầu theo dõi giá.</p>
+                </div>
+
+                <!-- Product Grid -->
+                <div class="product-grid" id="product-grid"></div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- ===================== CHART MODAL ===================== -->
+    <div class="modal-overlay" id="chart-modal" style="display:none;" onclick="handleModalOverlayClick(event)">
+        <div class="modal-card" id="modal-card">
+            <button class="modal-close-btn" onclick="closeChartModal()" aria-label="Đóng">✕</button>
+
+            <div class="modal-header">
+                <span class="platform-badge-modal" id="modal-platform-badge">Platform</span>
+                <h3 id="modal-title">Lịch sử biến động giá</h3>
+                <p class="modal-url-short" id="modal-url-short"></p>
+            </div>
+
+            <div class="modal-stats-row">
+                <div class="modal-stat">
+                    <span class="ms-label">Giá ban đầu</span>
+                    <span class="ms-val" id="ms-start">—</span>
+                </div>
+                <div class="modal-stat">
+                    <span class="ms-label">Giá hiện tại</span>
+                    <span class="ms-val" id="ms-current">—</span>
+                </div>
+                <div class="modal-stat">
+                    <span class="ms-label">Giá thấp nhất</span>
+                    <span class="ms-val text-green" id="ms-lowest">—</span>
+                </div>
+                <div class="modal-stat">
+                    <span class="ms-label">Giá cao nhất</span>
+                    <span class="ms-val text-red" id="ms-highest">—</span>
+                </div>
+                <div class="modal-stat">
+                    <span class="ms-label">Thay đổi</span>
+                    <span class="ms-val" id="ms-change">—</span>
+                </div>
+            </div>
+
+            <div class="chart-wrap">
+                <canvas id="priceChart"></canvas>
+            </div>
+
+            <div class="modal-footer-actions">
+                <a id="modal-buy-link" href="#" target="_blank" class="btn-buy-now" onclick="logAffiliate()">
+                    🛒 Mua Ngay (Affiliate Link)
+                </a>
+                <p class="modal-footer-note">💡 Nhấn "Làm mới" trên thẻ sản phẩm để cập nhật giá tức thì và xem biến động trên đồ thị.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== FOOTER ===================== -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div class="footer-left">
+                <strong>PricePulse</strong> – Theo dõi giá thông minh
+                <span class="footer-separator">|</span>
+                Cập nhật tự động mỗi 6 giờ (GMT+7)
+            </div>
+            <div class="footer-right">
+                <a href="https://accesstrade.vn" target="_blank">AccessTrade</a>
+                <a href="https://involve.asia" target="_blank">Involve Asia</a>
+                <a href="https://affiliate.shopee.vn" target="_blank">Shopee Affiliate</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- App Script -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
