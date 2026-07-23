@@ -9,11 +9,14 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           submodules: false
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -34,3 +37,10 @@ jobs:
           ENABLE_TELEGRAM: ${{ secrets.ENABLE_TELEGRAM }}
         run: |
           python main.py
+
+      - name: Commit and Push Price History
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add price_history.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "auto: update price history [GMT+7]" && git push)
