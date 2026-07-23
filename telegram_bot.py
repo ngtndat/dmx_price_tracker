@@ -58,11 +58,17 @@ class TelegramNotifier:
 
     def send_price_drop_alerts(self, items: list) -> bool:
         """
-        Format and send price notification for items.
-        Displays previous run's price as 'Giá cũ' and current run's price as 'Giá mới'.
+        Format and send price notification ONLY for successfully scraped items with current_price > 0.
+        Never sends 'Lỗi kết nối' or 'N/A' items to Telegram.
         """
-        if not items:
-            logging.info("No items to send. Skipping Telegram alert.")
+        # Filter strictly valid items
+        valid_items = [
+            item for item in items
+            if isinstance(item, dict) and item.get("success") and item.get("current_price", 0) > 0
+        ]
+
+        if not valid_items:
+            logging.warning("No valid product price data to send. Skipping Telegram alert to avoid sending error messages.")
             return True
 
         now_str = get_vn_time_str()
@@ -70,14 +76,14 @@ class TelegramNotifier:
         msg += f"📅 <i>Thời gian (GMT+7): {now_str}</i>\n"
         msg += f"-----------------------------------\n\n"
 
-        for item in items:
+        for item in valid_items:
             title = item.get("title", item.get("name", "Sản phẩm"))
             curr_price = item.get("current_price", 0)
             prev_price = item.get("previous_price", 0)
             url = item.get("url", "#")
             disc_rate_vs_prev = item.get("discount_rate_vs_prev", 0)
 
-            curr_formatted = f"{curr_price:,}đ".replace(",", ".") if curr_price > 0 else "N/A"
+            curr_formatted = f"{curr_price:,}đ".replace(",", ".")
             
             # Format Previous Price (from previous run)
             if prev_price > 0:
@@ -113,8 +119,9 @@ if __name__ == "__main__":
         {
             "title": "Máy lọc không khí LG PuriCare 360 Hit AS60GHWG0 41W",
             "current_price": 5390000,
-            "previous_price": 6000000,
-            "discount_rate_vs_prev": 10.2,
+            "previous_price": 5390000,
+            "discount_rate_vs_prev": 0.0,
+            "success": True,
             "url": "https://www.dienmayxanh.com/may-loc-khong-khi/may-loc-khong-khi-lg-puricare-360-hit-as60ghwg0-41w",
         }
     ]

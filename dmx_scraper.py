@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import time
+import subprocess
 import requests
 import urllib3
 from bs4 import BeautifulSoup
@@ -43,32 +44,59 @@ def clean_text(text: str) -> str:
         return ""
     return " ".join(text.split())
 
-def scrape_dmx_product(url: str) -> dict:
+def fetch_html_content(url: str) -> str:
     """
-    Ultra-robust scraper for Dien May Xanh product page combining JSON-LD & multi-selector HTML fallback.
-    Retries up to 3 times to prevent 0đ errors on Cloud runners.
+    Fetches HTML content using requests with retry, falling back to curl for 100% bypass reliability.
     """
-    response_text = ""
-    status_code = 0
-
-    for attempt in range(1, 4):
+    # Method 1: Requests
+    for attempt in range(1, 3):
+        ua = USER_AGENTS[(attempt - 1) % len(USER_AGENTS)]
         headers = {
-            "User-Agent": USER_AGENTS[(attempt - 1) % len(USER_AGENTS)],
+            "User-Agent": ua,
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
             "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
             "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
+            "Sec-Ch-Ua": '"Not/A)Brand";v="8", "Chromium";v="126", "Google Chrome";v="126"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
         }
         try:
-            logging.info(f"Fetching URL (Attempt {attempt}): {url}")
-            res = requests.get(url, headers=headers, verify=False, timeout=15)
-            status_code = res.status_code
-            if res.status_code == 200 and len(res.text) > 1000:
-                response_text = res.text
-                break
+            logging.info(f"Fetching URL via Requests (Attempt {attempt}): {url}")
+            res = requests.get(url, headers=headers, verify=False, timeout=12)
+            if res.status_code == 200 and len(res.text) > 2000 and "dienmayxanh" in res.text.lower():
+                return res.text
         except Exception as e:
-            logging.warning(f"Attempt {attempt} failed: {e}")
-            time.sleep(1)
+            logging.warning(f"Requests attempt {attempt} failed: {e}")
+        time.sleep(1)
+
+    # Method 2: Curl Fallback (Bypasses Python HTTP fingerprint checks on Cloud Runners)
+    try:
+        logging.info(f"Requests failed or blocked. Falling back to Curl for: {url}")
+        cmd = [
+            "curl", "-s", "-L", "--compressed",
+            "-A", USER_AGENTS[0],
+            "-H", "Accept-Language: vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+            url
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="ignore", timeout=20)
+        if res.stdout and len(res.stdout) > 2000:
+            logging.info(f"Curl successfully fetched {len(res.stdout)} bytes.")
+            return res.stdout
+    except Exception as e:
+        logging.error(f"Curl fallback failed: {e}")
+
+    return ""
+
+def scrape_dmx_product(url: str) -> dict:
+    """
+    Ultra-robust scraper for Dien May Xanh product page combining JSON-LD & multi-selector HTML fallback.
+    """
+    response_text = fetch_html_content(url)
 
     if not response_text:
         return {
@@ -80,10 +108,10 @@ def scrape_dmx_product(url: str) -> dict:
             "original_price_str": "0₫",
             "discount_rate": 0,
             "in_stock": False,
-            "status": f"Error HTTP {status_code}",
+            "status": "Lỗi kết nối",
             "promotions": "N/A",
             "success": False,
-            "error": f"HTTP {status_code}"
+            "error": "Failed to fetch product HTML"
         }
 
     soup = BeautifulSoup(response_text, "html.parser")
