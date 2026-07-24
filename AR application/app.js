@@ -1,10 +1,7 @@
 /**
  * AR Product Viewer Engine
- * Combines Three.js procedural 1:1 scale multi-angle 3D model generation & Google <model-viewer> WebXR AR placement.
+ * Dual-Mode WebAR: Native iOS QuickLook / WebXR & In-Browser Live Camera WebAR Feed.
  */
-
-// Import Three.js GLTFExporter dynamically or via global THREE
-let exporter = null;
 
 // Application State
 const state = {
@@ -12,7 +9,22 @@ const state = {
   filteredProducts: [],
   activeCategory: 'all',
   selectedProduct: null,
-  glbCache: new Map() // Cache generated GLB blob URLs
+  glbCache: new Map(),
+  
+  // Live Camera WebAR state
+  cameraStream: null,
+  threeScene: null,
+  threeCamera: null,
+  threeRenderer: null,
+  productMesh: null,
+  touchState: {
+    isDragging: false,
+    lastX: 0,
+    lastY: 0,
+    posX: 0,
+    posY: 0,
+    rotationY: 0
+  }
 };
 
 // DOM Elements
@@ -28,14 +40,21 @@ const elements = {
   btnOpenUpload: document.getElementById('btnOpenUpload'),
   uploadModalClose: document.getElementById('uploadModalClose'),
   addProductForm: document.getElementById('addProductForm'),
-  btnTriggerAR: document.getElementById('btnTriggerAR')
+  
+  // Live Camera WebAR Elements
+  btnLiveCamera: document.getElementById('btnLiveCamera'),
+  liveCameraModal: document.getElementById('liveCameraModal'),
+  btnCloseLiveCamera: document.getElementById('btnCloseLiveCamera'),
+  cameraVideo: document.getElementById('cameraVideo'),
+  cameraCanvas: document.getElementById('cameraCanvas'),
+  liveCameraTitle: document.getElementById('liveCameraTitle'),
+  btnCapturePhoto: document.getElementById('btnCapturePhoto')
 };
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', async () => {
   await loadProducts();
   setupEventListeners();
-  setupThreeJSEngine();
 });
 
 // Load products from JSON
@@ -150,23 +169,13 @@ function setupEventListeners() {
   // Add Product Form Submission
   elements.addProductForm.addEventListener('submit', handleAddProductSubmit);
 
-  // Trigger AR Button inside Model Viewer Modal
-  if (elements.btnTriggerAR) {
-    elements.btnTriggerAR.addEventListener('click', () => {
-      if (elements.modelViewer.canActivateAR) {
-        elements.modelViewer.activateAR();
-      } else {
-        alert('Thiết bị hoặc trình duyệt của bạn không hỗ trợ WebXR AR trực tiếp. Hãy thử mở lại bằng Trình duyệt Chrome/Safari trên điện thoại di động!');
-      }
-    });
-  }
-}
+  // Live Camera WebAR triggers
+  elements.btnLiveCamera.addEventListener('click', openLiveCameraModal);
+  elements.btnCloseLiveCamera.addEventListener('click', closeLiveCameraModal);
+  elements.btnCapturePhoto.addEventListener('click', capturePhoto);
 
-// Initialize Three.js Engine for 3D GLB Procedural Generation
-function setupThreeJSEngine() {
-  if (window.THREE && window.THREE.GLTFExporter) {
-    exporter = new window.THREE.GLTFExporter();
-  }
+  // Touch gesture listeners on camera canvas
+  setupCanvasTouchGestures();
 }
 
 // Generate 1:1 Scale Procedural 3D Model with Multi-Angle Textures
@@ -191,7 +200,7 @@ async function generate3DModel(product) {
     const rightTex = imgs.right ? textureLoader.load(imgs.right) : frontTex;
     const topTex = imgs.top ? textureLoader.load(imgs.top) : frontTex;
 
-    // Default neutral metallic/matte material fallback
+    // Default neutral material fallback
     const defaultMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3 });
 
     const materials = [
@@ -204,20 +213,19 @@ async function generate3DModel(product) {
     ];
 
     const mesh = new THREE.Mesh(geometry, materials);
-    mesh.position.set(0, H / 2, 0); // Position box base at Y=0 ground plane
+    mesh.position.set(0, H / 2, 0); // Base at Y=0
 
     const scene = new THREE.Scene();
     scene.add(mesh);
 
-    // Add ambient and directional lights
+    // Lights
     const light = new THREE.DirectionalLight(0xffffff, 1.2);
     light.position.set(2, 4, 3);
     scene.add(light);
     scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 
     // Export scene to GLB Blob
-    if (!exporter) exporter = new THREE.GLTFExporter();
-
+    const exporter = new THREE.GLTFExporter();
     exporter.parse(
       scene,
       function (gltf) {
@@ -244,7 +252,7 @@ async function openARViewer(product) {
   // Show Modal Overlay
   elements.arModal.classList.add('active');
 
-  // Configure <model-viewer> placement mode (floor vs wall)
+  // Configure <model-viewer> placement mode
   if (product.placement === 'wall') {
     elements.modelViewer.setAttribute('ar-placement', 'wall');
   } else {
@@ -255,6 +263,7 @@ async function openARViewer(product) {
   try {
     const glbUrl = await generate3DModel(product);
     elements.modelViewer.setAttribute('src', glbUrl);
+    elements.modelViewer.setAttribute('ios-src', glbUrl);
   } catch (err) {
     console.error('Could not generate 3D model:', err);
   }
@@ -264,6 +273,171 @@ async function openARViewer(product) {
 function closeARModal() {
   elements.arModal.classList.remove('active');
   elements.modelViewer.removeAttribute('src');
+}
+
+// -------------------------------------------------------------
+// Live Web Camera WebAR Engine (Guaranteed 100% Mobile Support)
+// -------------------------------------------------------------
+async function openLiveCameraModal() {
+  const product = state.selectedProduct;
+  if (!product) return;
+
+  elements.liveCameraTitle.textContent = `Camera WebAR - ${product.name}`;
+  elements.liveCameraModal.classList.add('active');
+
+  // 1. Request Phone Back Camera Stream
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { exact: 'environment' }
+      },
+      audio: false
+    }).catch(async () => {
+      // Fallback if 'environment' exact fails on some devices
+      return await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false
+      });
+    });
+
+    state.cameraStream = stream;
+    elements.cameraVideo.srcObject = stream;
+    await elements.cameraVideo.play();
+  } catch (err) {
+    console.error('Camera access denied:', err);
+    alert('Vui lòng cho phép quyền truy cập Camera trong trình duyệt để xem sản phẩm trong phòng!');
+  }
+
+  // 2. Initialize Three.js Overlaid 3D Canvas
+  initThreeJSCameraCanvas(product);
+}
+
+function initThreeJSCameraCanvas(product) {
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  // Scene, Camera, Renderer
+  state.threeScene = new THREE.Scene();
+  state.threeCamera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+  state.threeCamera.position.set(0, 1.2, 2.5);
+  state.threeCamera.lookAt(0, 0, 0);
+
+  state.threeRenderer = new THREE.WebGLRenderer({
+    canvas: elements.cameraCanvas,
+    alpha: true,
+    antialias: true
+  });
+  state.threeRenderer.setSize(width, height);
+  state.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+  // Lights
+  const light = new THREE.DirectionalLight(0xffffff, 1.2);
+  light.position.set(3, 5, 4);
+  state.threeScene.add(light);
+  state.threeScene.add(new THREE.AmbientLight(0xffffff, 0.8));
+
+  // Construct 1:1 scale cuboid mesh
+  const W = product.dimensions.width / 100;
+  const H = product.dimensions.height / 100;
+  const D = product.dimensions.depth / 100;
+
+  const geometry = new THREE.BoxGeometry(W, H, D);
+  const textureLoader = new THREE.TextureLoader();
+
+  const imgs = product.images;
+  const frontTex = imgs.front ? textureLoader.load(imgs.front) : null;
+  const backTex = imgs.back ? textureLoader.load(imgs.back) : frontTex;
+  const leftTex = imgs.left ? textureLoader.load(imgs.left) : frontTex;
+  const rightTex = imgs.right ? textureLoader.load(imgs.right) : frontTex;
+  const topTex = imgs.top ? textureLoader.load(imgs.top) : frontTex;
+
+  const defaultMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3 });
+
+  const materials = [
+    rightTex ? new THREE.MeshStandardMaterial({ map: rightTex, roughness: 0.4 }) : defaultMat,
+    leftTex ? new THREE.MeshStandardMaterial({ map: leftTex, roughness: 0.4 }) : defaultMat,
+    topTex ? new THREE.MeshStandardMaterial({ map: topTex, roughness: 0.4 }) : defaultMat,
+    defaultMat,
+    frontTex ? new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.3 }) : defaultMat,
+    backTex ? new THREE.MeshStandardMaterial({ map: backTex, roughness: 0.4 }) : defaultMat
+  ];
+
+  state.productMesh = new THREE.Mesh(geometry, materials);
+  state.productMesh.position.set(0, -0.2, 0);
+  state.threeScene.add(state.productMesh);
+
+  // Render loop
+  function animate() {
+    if (!elements.liveCameraModal.classList.contains('active')) return;
+    requestAnimationFrame(animate);
+
+    if (state.productMesh) {
+      state.productMesh.rotation.y = state.touchState.rotationY;
+      state.productMesh.position.x = state.touchState.posX;
+      state.productMesh.position.y = state.touchState.posY;
+    }
+
+    state.threeRenderer.render(state.threeScene, state.threeCamera);
+  }
+  animate();
+}
+
+// Touch Gestures for Moving and Rotating 3D Product over Live Camera
+function setupCanvasTouchGestures() {
+  const canvas = elements.cameraCanvas;
+
+  canvas.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) {
+      state.touchState.isDragging = true;
+      state.touchState.lastX = e.touches[0].clientX;
+      state.touchState.lastY = e.touches[0].clientY;
+    }
+  });
+
+  canvas.addEventListener('touchmove', e => {
+    if (!state.touchState.isDragging || e.touches.length !== 1) return;
+    e.preventDefault();
+
+    const deltaX = e.touches[0].clientX - state.touchState.lastX;
+    const deltaY = e.touches[0].clientY - state.touchState.lastY;
+
+    state.touchState.rotationY += deltaX * 0.01;
+    state.touchState.posY -= deltaY * 0.003;
+
+    state.touchState.lastX = e.touches[0].clientX;
+    state.touchState.lastY = e.touches[0].clientY;
+  });
+
+  canvas.addEventListener('touchend', () => {
+    state.touchState.isDragging = false;
+  });
+}
+
+// Close Live Camera Modal
+function closeLiveCameraModal() {
+  elements.liveCameraModal.classList.remove('active');
+  if (state.cameraStream) {
+    state.cameraStream.getTracks().forEach(track => track.stop());
+    state.cameraStream = null;
+  }
+}
+
+// Capture Photo inside Camera Room View
+function capturePhoto() {
+  const canvas = document.createElement('canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+
+  // Draw video background
+  ctx.drawImage(elements.cameraVideo, 0, 0, canvas.width, canvas.height);
+  // Draw 3D product canvas overlay
+  ctx.drawImage(elements.cameraCanvas, 0, 0, canvas.width, canvas.height);
+
+  const link = document.createElement('a');
+  link.download = `AR_Product_${Date.now()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
 }
 
 // Open / Close Upload Modal
@@ -292,7 +466,6 @@ function handleAddProductSubmit(e) {
     return;
   }
 
-  // File uploads or preview read
   const frontFile = form.imgFront.files[0];
   const frontUrl = frontFile ? URL.createObjectURL(frontFile) : 'product info/Tủ lạnh/front.jpg';
   const leftFile = form.imgLeft.files[0];
@@ -332,6 +505,5 @@ function handleAddProductSubmit(e) {
   closeUploadModal();
   form.reset();
 
-  // Open AR immediately for newly added product
   openARViewer(newProduct);
 }

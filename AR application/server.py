@@ -3,27 +3,14 @@ import socketserver
 import mimetypes
 import os
 import sys
-import socket
 
 # Force UTF-8 encoding for stdout on Windows
 if sys.platform == 'win32':
     sys.stdout.reconfigure(encoding='utf-8')
 
+HOST = "127.0.0.1"
 PORT = 8080
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
-
-def get_local_ips():
-    ips = []
-    try:
-        hostname = socket.gethostname()
-        for item in socket.getaddrinfo(hostname, None):
-            ip = item[4][0]
-            if ':' not in ip and not ip.startswith('127.'):
-                if ip not in ips:
-                    ips.append(ip)
-    except Exception:
-        pass
-    return ips
 
 class ARHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -45,15 +32,8 @@ mimetypes.add_type('application/json', '.json')
 
 if __name__ == '__main__':
     handler = ARHTTPRequestHandler
-    with socketserver.TCPServer(("", PORT), handler) as httpd:
-        print("==================================================")
-        print(f" [AR Web App Server] Dang chay tai:")
-        print(f" -> Tren may tinh:  http://localhost:{PORT}")
-        
-        ips = get_local_ips()
-        for ip in ips:
-            print(f" -> Tren dien thoai: http://{ip}:{PORT}")
-        print("==================================================")
+    with socketserver.TCPServer((HOST, PORT), handler) as httpd:
+        print(f"[AR Web App Server] running at http://{HOST}:{PORT}")
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
