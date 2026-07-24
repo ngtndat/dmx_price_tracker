@@ -18,6 +18,7 @@ const state = {
   threeRenderer: null,
   productMesh: null,
   animFrameId: null,
+  isCameraOpening: false,
   touchState: {
     isDragging: false,
     lastX: 0,
@@ -70,7 +71,7 @@ async function loadProducts() {
   }
 }
 
-// Render product cards with direct action buttons
+// Render product cards with touch-friendly action buttons
 function renderProducts() {
   elements.productsGrid.innerHTML = '';
 
@@ -119,31 +120,31 @@ function renderProducts() {
         </div>
 
         <div class="product-actions">
-          <button class="btn btn-primary btn-ar-direct" data-id="${prod.id}">
+          <button type="button" class="btn btn-primary btn-ar-direct" data-id="${prod.id}">
             <i class="ri-camera-fill"></i> Bật Camera AR Trong Phòng
           </button>
-          <button class="btn btn-glass btn-3d-view" data-id="${prod.id}">
+          <button type="button" class="btn btn-glass btn-3d-view" data-id="${prod.id}">
             <i class="ri-box-3-line"></i> Xem 3D 360°
           </button>
         </div>
       </div>
     `;
 
-    // Direct Camera Button Handler (MUST request camera synchronously on click for iOS)
+    // Direct Camera Button Handler (instant touch trigger for iOS Safari)
     const btnDirectCamera = card.querySelector('.btn-ar-direct');
-    btnDirectCamera.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
+    
+    const triggerCamera = () => {
+      if (state.isCameraOpening) return;
+      state.isCameraOpening = true;
       requestCameraAndOpenModal(prod);
-    });
+      setTimeout(() => { state.isCameraOpening = false; }, 1000);
+    };
+
+    btnDirectCamera.addEventListener('click', triggerCamera);
 
     // 3D View Button Handler
     const btn3DView = card.querySelector('.btn-3d-view');
-    btn3DView.addEventListener('click', (e) => {
-      e.stopPropagation();
-      e.preventDefault();
-      openARViewer(prod);
-    });
+    btn3DView.addEventListener('click', () => openARViewer(prod));
 
     elements.productsGrid.appendChild(card);
   });
@@ -226,8 +227,7 @@ function setupEventListeners() {
 
   // Modal Launch Camera Button
   if (elements.btnModalLaunchCamera) {
-    elements.btnModalLaunchCamera.addEventListener('click', (e) => {
-      e.stopPropagation();
+    elements.btnModalLaunchCamera.addEventListener('click', () => {
       closeARModal();
       if (state.selectedProduct) {
         requestCameraAndOpenModal(state.selectedProduct);
