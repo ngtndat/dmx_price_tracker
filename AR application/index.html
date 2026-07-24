@@ -13,12 +13,11 @@
   <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 
-  <!-- Three.js 3D & GLTF Exporter Engine -->
+  <!-- Three.js 3D Engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 
-  <!-- Google <model-viewer> WebXR / AR Engine -->
+  <!-- Google <model-viewer> Engine -->
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 </head>
 <body>
@@ -48,7 +47,7 @@
   <section class="hero">
     <div class="hero-content">
       <h1>Trải Nghiệm Đặt Sản Phẩm <span>AR Thực Tế Tăng Cường</span></h1>
-      <p>Chọn thiết bị điện máy, sử dụng camera điện thoại để quét sàn hoặc tường phòng khách/phòng ngủ và thấy ngay sản phẩm đặt đúng vị trí với kích thước thực 1:1.</p>
+      <p>Chọn thiết bị điện máy, bật camera điện thoại để quét sàn hoặc tường phòng khách/phòng ngủ và thấy ngay sản phẩm đặt đúng vị trí với kích thước thực 1:1.</p>
       
       <div class="hero-features">
         <div class="feature-pill">
@@ -65,7 +64,7 @@
         <i class="ri-camera-lens-line"></i> Camera AR Ready
       </span>
       <i class="ri-box-3-fill" style="font-size: 5rem; color: var(--primary); opacity: 0.8; margin-bottom: 1rem;"></i>
-      <p style="color: var(--text-muted); font-size: 0.95rem; text-align: center;">Chạm vào bất kỳ sản phẩm nào bên dưới để bật Camera AR và quét phòng của bạn.</p>
+      <p style="color: var(--text-muted); font-size: 0.95rem; text-align: center;">Chạm vào "Bật Camera AR" ở bất kỳ sản phẩm nào bên dưới để xem ngay trong phòng của bạn.</p>
     </div>
   </section>
 
@@ -92,17 +91,14 @@
   <div class="modal-overlay" id="arModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h2 class="modal-title" id="arModalTitle">Trình Xem AR 1:1</h2>
+        <h2 class="modal-title" id="arModalTitle">Xem 3D Sản Phẩm Tỉ Lệ 1:1</h2>
         <button class="modal-close" id="arModalClose"><i class="ri-close-line"></i></button>
       </div>
 
       <div class="ar-viewport-container">
-        <!-- Google <model-viewer> with Native AR QuickLook & WebXR -->
+        <!-- Google <model-viewer> -->
         <model-viewer 
           id="modelViewer"
-          ar
-          ar-modes="quick-look scene-viewer webxr"
-          ar-scale="fixed"
           camera-controls
           auto-rotate
           shadow-intensity="1"
@@ -110,10 +106,6 @@
           exposure="1"
           alt="Mô hình 3D AR Sản phẩm"
         >
-          <!-- Native AR Button Slot for iOS Quick Look & Android SceneViewer -->
-          <button slot="ar-button" class="btn btn-primary ar-slot-btn" id="arSlotBtn">
-            <i class="ri-qr-scan-2-line"></i> Đặt AR Thực Tế (iOS QuickLook / Android)
-          </button>
         </model-viewer>
 
         <!-- Floating Dimension Badge -->
@@ -121,10 +113,10 @@
           <i class="ri-ruler-line"></i> Kích thước chuẩn
         </div>
 
-        <!-- Custom Live Web Camera Overlay Button -->
+        <!-- Floating Camera Button inside 3D Viewer -->
         <div class="ar-floating-controls">
-          <button class="btn btn-glass" id="btnLiveCamera" style="background: rgba(16, 185, 129, 0.25); border-color: rgba(16, 185, 129, 0.5); color: #FFF;">
-            <i class="ri-camera-fill"></i> Mở Camera Trực Tiếp Trình Duyệt (WebAR)
+          <button class="btn btn-primary" id="btnModalLaunchCamera">
+            <i class="ri-camera-fill"></i> Bật Camera Đặt AR Trong Phòng
           </button>
         </div>
       </div>
@@ -133,17 +125,18 @@
 
   <!-- Fullscreen Live Web Camera Feed Overlay Modal -->
   <div class="live-camera-modal" id="liveCameraModal">
-    <video id="cameraVideo" autoplay playsinline muted></video>
+    <!-- Camera Video Element with Webkit Playsinline for iOS Safari -->
+    <video id="cameraVideo" autoplay playsinline webkit-playsinline muted></video>
     <canvas id="cameraCanvas"></canvas>
     
     <div class="live-camera-header">
-      <div class="live-camera-title" id="liveCameraTitle">Chế độ Camera WebAR</div>
+      <div class="live-camera-title" id="liveCameraTitle">Camera WebAR Thực Tế</div>
       <button class="live-camera-close" id="btnCloseLiveCamera"><i class="ri-close-line"></i></button>
     </div>
 
     <div class="live-camera-controls">
       <div class="camera-tip">
-        <i class="ri-touch-line"></i> Chạm & vuốt trên màn hình để di chuyển và xoay mô hình 3D trong phòng
+        <i class="ri-touch-line"></i> Vuốt 1 ngón để xoay / Vuốt 2 ngón để di chuyển sản phẩm
       </div>
       <button class="btn btn-primary" id="btnCapturePhoto">
         <i class="ri-camera-lens-line"></i> Chụp Ảnh Sản Phẩm Trong Phòng

@@ -1,6 +1,6 @@
 /**
  * AR Product Viewer Engine
- * Dual-Mode WebAR: Native iOS QuickLook / WebXR & In-Browser Live Camera WebAR Feed.
+ * Dual-Mode WebAR: Direct Camera Feed Overlay & 3D Interactive Viewer.
  */
 
 // Application State
@@ -17,6 +17,7 @@ const state = {
   threeCamera: null,
   threeRenderer: null,
   productMesh: null,
+  animFrameId: null,
   touchState: {
     isDragging: false,
     lastX: 0,
@@ -42,7 +43,7 @@ const elements = {
   addProductForm: document.getElementById('addProductForm'),
   
   // Live Camera WebAR Elements
-  btnLiveCamera: document.getElementById('btnLiveCamera'),
+  btnModalLaunchCamera: document.getElementById('btnModalLaunchCamera'),
   liveCameraModal: document.getElementById('liveCameraModal'),
   btnCloseLiveCamera: document.getElementById('btnCloseLiveCamera'),
   cameraVideo: document.getElementById('cameraVideo'),
@@ -69,7 +70,7 @@ async function loadProducts() {
   }
 }
 
-// Render product cards
+// Render product cards with direct action buttons
 function renderProducts() {
   elements.productsGrid.innerHTML = '';
 
@@ -118,16 +119,29 @@ function renderProducts() {
         </div>
 
         <div class="product-actions">
-          <button class="btn btn-primary btn-ar-trigger" data-id="${prod.id}">
-            <i class="ri-camera-lens-fill"></i> Xem AR Trực Tiếp
+          <button class="btn btn-primary btn-ar-direct" data-id="${prod.id}">
+            <i class="ri-camera-fill"></i> Bật Camera AR Trong Phòng
+          </button>
+          <button class="btn btn-glass btn-3d-view" data-id="${prod.id}">
+            <i class="ri-box-3-line"></i> Xem 3D 360°
           </button>
         </div>
       </div>
     `;
 
-    // Click handler for AR view
-    const btn = card.querySelector('.btn-ar-trigger');
-    btn.addEventListener('click', () => openARViewer(prod));
+    // Direct Camera Button Handler
+    const btnDirectCamera = card.querySelector('.btn-ar-direct');
+    btnDirectCamera.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openLiveCameraModal(prod);
+    });
+
+    // 3D View Button Handler
+    const btn3DView = card.querySelector('.btn-3d-view');
+    btn3DView.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openARViewer(prod);
+    });
 
     elements.productsGrid.appendChild(card);
   });
@@ -169,8 +183,17 @@ function setupEventListeners() {
   // Add Product Form Submission
   elements.addProductForm.addEventListener('submit', handleAddProductSubmit);
 
-  // Live Camera WebAR triggers
-  elements.btnLiveCamera.addEventListener('click', openLiveCameraModal);
+  // Modal Launch Camera Button
+  if (elements.btnModalLaunchCamera) {
+    elements.btnModalLaunchCamera.addEventListener('click', () => {
+      closeARModal();
+      if (state.selectedProduct) {
+        openLiveCameraModal(state.selectedProduct);
+      }
+    });
+  }
+
+  // Live Camera WebAR closers and photo capture
   elements.btnCloseLiveCamera.addEventListener('click', closeLiveCameraModal);
   elements.btnCapturePhoto.addEventListener('click', capturePhoto);
 
@@ -192,7 +215,6 @@ async function generate3DModel(product) {
     const geometry = new THREE.BoxGeometry(W, H, D);
     const textureLoader = new THREE.TextureLoader();
 
-    // Prepare multi-angle textures (+X, -X, +Y, -Y, +Z, -Z)
     const imgs = product.images;
     const frontTex = imgs.front ? textureLoader.load(imgs.front) : null;
     const backTex = imgs.back ? textureLoader.load(imgs.back) : frontTex;
@@ -200,16 +222,15 @@ async function generate3DModel(product) {
     const rightTex = imgs.right ? textureLoader.load(imgs.right) : frontTex;
     const topTex = imgs.top ? textureLoader.load(imgs.top) : frontTex;
 
-    // Default neutral material fallback
     const defaultMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3 });
 
     const materials = [
-      rightTex ? new THREE.MeshStandardMaterial({ map: rightTex, roughness: 0.4 }) : defaultMat, // Right (+X)
-      leftTex ? new THREE.MeshStandardMaterial({ map: leftTex, roughness: 0.4 }) : defaultMat,   // Left (-X)
-      topTex ? new THREE.MeshStandardMaterial({ map: topTex, roughness: 0.4 }) : defaultMat,     // Top (+Y)
-      defaultMat,                                                                                 // Bottom (-Y)
-      frontTex ? new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.3 }) : defaultMat, // Front (+Z)
-      backTex ? new THREE.MeshStandardMaterial({ map: backTex, roughness: 0.4 }) : defaultMat   // Back (-Z)
+      rightTex ? new THREE.MeshStandardMaterial({ map: rightTex, roughness: 0.4 }) : defaultMat,
+      leftTex ? new THREE.MeshStandardMaterial({ map: leftTex, roughness: 0.4 }) : defaultMat,
+      topTex ? new THREE.MeshStandardMaterial({ map: topTex, roughness: 0.4 }) : defaultMat,
+      defaultMat,
+      frontTex ? new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.3 }) : defaultMat,
+      backTex ? new THREE.MeshStandardMaterial({ map: backTex, roughness: 0.4 }) : defaultMat
     ];
 
     const mesh = new THREE.Mesh(geometry, materials);
@@ -252,18 +273,10 @@ async function openARViewer(product) {
   // Show Modal Overlay
   elements.arModal.classList.add('active');
 
-  // Configure <model-viewer> placement mode
-  if (product.placement === 'wall') {
-    elements.modelViewer.setAttribute('ar-placement', 'wall');
-  } else {
-    elements.modelViewer.setAttribute('ar-placement', 'floor');
-  }
-
   // Generate 3D Model dynamically
   try {
     const glbUrl = await generate3DModel(product);
     elements.modelViewer.setAttribute('src', glbUrl);
-    elements.modelViewer.setAttribute('ios-src', glbUrl);
   } catch (err) {
     console.error('Could not generate 3D model:', err);
   }
@@ -276,36 +289,49 @@ function closeARModal() {
 }
 
 // -------------------------------------------------------------
-// Live Web Camera WebAR Engine (Guaranteed 100% Mobile Support)
+// Live Web Camera WebAR Engine (Direct Touch & iOS Safari Friendly)
 // -------------------------------------------------------------
-async function openLiveCameraModal() {
-  const product = state.selectedProduct;
+async function openLiveCameraModal(product) {
   if (!product) return;
+  state.selectedProduct = product;
 
   elements.liveCameraTitle.textContent = `Camera WebAR - ${product.name}`;
   elements.liveCameraModal.classList.add('active');
 
-  // 1. Request Phone Back Camera Stream
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: { exact: 'environment' }
-      },
-      audio: false
-    }).catch(async () => {
-      // Fallback if 'environment' exact fails on some devices
-      return await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false
-      });
-    });
+  // Reset touch state
+  state.touchState.posX = 0;
+  state.touchState.posY = -0.2;
+  state.touchState.rotationY = 0;
 
-    state.cameraStream = stream;
-    elements.cameraVideo.srcObject = stream;
-    await elements.cameraVideo.play();
+  // 1. Request Camera Feed with iOS Safari Fallback Handling
+  try {
+    const constraints = [
+      { video: { facingMode: { exact: 'environment' } }, audio: false },
+      { video: { facingMode: 'environment' }, audio: false },
+      { video: true, audio: false }
+    ];
+
+    let stream = null;
+    for (const constraint of constraints) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraint);
+        if (stream) break;
+      } catch (err) {
+        // try next fallback
+      }
+    }
+
+    if (stream) {
+      state.cameraStream = stream;
+      elements.cameraVideo.srcObject = stream;
+      elements.cameraVideo.setAttribute('playsinline', 'true');
+      elements.cameraVideo.setAttribute('webkit-playsinline', 'true');
+      await elements.cameraVideo.play().catch(e => console.log('Auto play bypass:', e));
+    } else {
+      alert('Không thể mở Camera trên thiết bị. Vui lòng cho phép quyền Camera trong cài đặt trình duyệt!');
+    }
   } catch (err) {
-    console.error('Camera access denied:', err);
-    alert('Vui lòng cho phép quyền truy cập Camera trong trình duyệt để xem sản phẩm trong phòng!');
+    console.error('Camera access error:', err);
   }
 
   // 2. Initialize Three.js Overlaid 3D Canvas
@@ -369,7 +395,7 @@ function initThreeJSCameraCanvas(product) {
   // Render loop
   function animate() {
     if (!elements.liveCameraModal.classList.contains('active')) return;
-    requestAnimationFrame(animate);
+    state.animFrameId = requestAnimationFrame(animate);
 
     if (state.productMesh) {
       state.productMesh.rotation.y = state.touchState.rotationY;
@@ -386,17 +412,18 @@ function initThreeJSCameraCanvas(product) {
 function setupCanvasTouchGestures() {
   const canvas = elements.cameraCanvas;
 
+  // Touch start
   canvas.addEventListener('touchstart', e => {
     if (e.touches.length === 1) {
       state.touchState.isDragging = true;
       state.touchState.lastX = e.touches[0].clientX;
       state.touchState.lastY = e.touches[0].clientY;
     }
-  });
+  }, { passive: true });
 
+  // Touch move
   canvas.addEventListener('touchmove', e => {
     if (!state.touchState.isDragging || e.touches.length !== 1) return;
-    e.preventDefault();
 
     const deltaX = e.touches[0].clientX - state.touchState.lastX;
     const deltaY = e.touches[0].clientY - state.touchState.lastY;
@@ -406,8 +433,9 @@ function setupCanvasTouchGestures() {
 
     state.touchState.lastX = e.touches[0].clientX;
     state.touchState.lastY = e.touches[0].clientY;
-  });
+  }, { passive: true });
 
+  // Touch end
   canvas.addEventListener('touchend', () => {
     state.touchState.isDragging = false;
   });
@@ -416,6 +444,10 @@ function setupCanvasTouchGestures() {
 // Close Live Camera Modal
 function closeLiveCameraModal() {
   elements.liveCameraModal.classList.remove('active');
+  if (state.animFrameId) {
+    cancelAnimationFrame(state.animFrameId);
+    state.animFrameId = null;
+  }
   if (state.cameraStream) {
     state.cameraStream.getTracks().forEach(track => track.stop());
     state.cameraStream = null;
@@ -505,5 +537,5 @@ function handleAddProductSubmit(e) {
   closeUploadModal();
   form.reset();
 
-  openARViewer(newProduct);
+  openLiveCameraModal(newProduct);
 }
