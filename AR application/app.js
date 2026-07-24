@@ -134,8 +134,6 @@ function renderProducts() {
     btnDirectCamera.addEventListener('click', (e) => {
       e.stopPropagation();
       e.preventDefault();
-      
-      // Synchronous User Gesture camera trigger for iOS Safari
       requestCameraAndOpenModal(prod);
     });
 
@@ -185,7 +183,7 @@ function requestCameraAndOpenModal(product) {
     initThreeJSCameraCanvas(product);
   })
   .catch(err => {
-    console.error('Camera permission denied or error:', err);
+    console.error('Camera permission error:', err);
     alert('Vui lòng cấp quyền mở Camera trong cài đặt Safari/Chrome trên điện thoại:\n\n1. Bấm vào biểu tượng Cài đặt / Quyền riêng tư ở thanh địa chỉ.\n2. Chọn Camera -> Cho phép (Allow).\n3. Tải lại trang và thử lại!');
   });
 }
@@ -245,6 +243,25 @@ function setupEventListeners() {
   setupCanvasTouchGestures();
 }
 
+// Create Three.js Material with transparent PNG textures and solid appliance background
+function createProductMaterial(texture, baseColor = 0xffffff) {
+  if (!texture) {
+    return new THREE.MeshStandardMaterial({
+      color: 0x1e293b,
+      metalness: 0.5,
+      roughness: 0.3
+    });
+  }
+  return new THREE.MeshStandardMaterial({
+    map: texture,
+    transparent: true,
+    alphaTest: 0.1,
+    color: baseColor,
+    metalness: 0.2,
+    roughness: 0.3
+  });
+}
+
 // Generate 1:1 Scale Procedural 3D Model with Multi-Angle Textures
 async function generate3DModel(product) {
   if (state.glbCache.has(product.id)) {
@@ -260,21 +277,19 @@ async function generate3DModel(product) {
     const textureLoader = new THREE.TextureLoader();
 
     const imgs = product.images;
-    const frontTex = imgs.front ? textureLoader.load(imgs.front) : null;
-    const backTex = imgs.back ? textureLoader.load(imgs.back) : frontTex;
-    const leftTex = imgs.left ? textureLoader.load(imgs.left) : frontTex;
-    const rightTex = imgs.right ? textureLoader.load(imgs.right) : frontTex;
-    const topTex = imgs.top ? textureLoader.load(imgs.top) : frontTex;
-
-    const defaultMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3 });
+    const frontTex = imgs.front ? textureLoader.load(encodeURI(imgs.front)) : null;
+    const backTex = imgs.back ? textureLoader.load(encodeURI(imgs.back)) : null;
+    const leftTex = imgs.left ? textureLoader.load(encodeURI(imgs.left)) : null;
+    const rightTex = imgs.right ? textureLoader.load(encodeURI(imgs.right)) : null;
+    const topTex = imgs.top ? textureLoader.load(encodeURI(imgs.top)) : null;
 
     const materials = [
-      rightTex ? new THREE.MeshStandardMaterial({ map: rightTex, roughness: 0.4 }) : defaultMat,
-      leftTex ? new THREE.MeshStandardMaterial({ map: leftTex, roughness: 0.4 }) : defaultMat,
-      topTex ? new THREE.MeshStandardMaterial({ map: topTex, roughness: 0.4 }) : defaultMat,
-      defaultMat,
-      frontTex ? new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.3 }) : defaultMat,
-      backTex ? new THREE.MeshStandardMaterial({ map: backTex, roughness: 0.4 }) : defaultMat
+      createProductMaterial(rightTex), // Right (+X)
+      createProductMaterial(leftTex),  // Left (-X)
+      createProductMaterial(topTex),   // Top (+Y)
+      createProductMaterial(null),     // Bottom (-Y)
+      createProductMaterial(frontTex), // Front (+Z)
+      createProductMaterial(backTex)   // Back (-Z)
     ];
 
     const mesh = new THREE.Mesh(geometry, materials);
@@ -348,37 +363,51 @@ function initThreeJSCameraCanvas(product) {
   state.threeRenderer.setSize(width, height);
   state.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-  const light = new THREE.DirectionalLight(0xffffff, 1.2);
+  const light = new THREE.DirectionalLight(0xffffff, 1.4);
   light.position.set(3, 5, 4);
   state.threeScene.add(light);
-  state.threeScene.add(new THREE.AmbientLight(0xffffff, 0.8));
+  state.threeScene.add(new THREE.AmbientLight(0xffffff, 0.9));
 
   const W = product.dimensions.width / 100;
   const H = product.dimensions.height / 100;
   const D = product.dimensions.depth / 100;
 
+  // Solid Inner Chassis Box (Realistic Metallic Body)
+  const chassisGeom = new THREE.BoxGeometry(W * 0.99, H * 0.99, D * 0.99);
+  const chassisMat = new THREE.MeshStandardMaterial({
+    color: 0x1e293b,
+    metalness: 0.6,
+    roughness: 0.2
+  });
+  const chassisMesh = new THREE.Mesh(chassisGeom, chassisMat);
+
+  // Outer Textured Box with Transparent Processed PNGs
   const geometry = new THREE.BoxGeometry(W, H, D);
   const textureLoader = new THREE.TextureLoader();
 
   const imgs = product.images;
-  const frontTex = imgs.front ? textureLoader.load(imgs.front) : null;
-  const backTex = imgs.back ? textureLoader.load(imgs.back) : frontTex;
-  const leftTex = imgs.left ? textureLoader.load(imgs.left) : frontTex;
-  const rightTex = imgs.right ? textureLoader.load(imgs.right) : frontTex;
-  const topTex = imgs.top ? textureLoader.load(imgs.top) : frontTex;
-
-  const defaultMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.3 });
+  const frontTex = imgs.front ? textureLoader.load(encodeURI(imgs.front)) : null;
+  const backTex = imgs.back ? textureLoader.load(encodeURI(imgs.back)) : null;
+  const leftTex = imgs.left ? textureLoader.load(encodeURI(imgs.left)) : null;
+  const rightTex = imgs.right ? textureLoader.load(encodeURI(imgs.right)) : null;
+  const topTex = imgs.top ? textureLoader.load(encodeURI(imgs.top)) : null;
 
   const materials = [
-    rightTex ? new THREE.MeshStandardMaterial({ map: rightTex, roughness: 0.4 }) : defaultMat,
-    leftTex ? new THREE.MeshStandardMaterial({ map: leftTex, roughness: 0.4 }) : defaultMat,
-    topTex ? new THREE.MeshStandardMaterial({ map: topTex, roughness: 0.4 }) : defaultMat,
-    defaultMat,
-    frontTex ? new THREE.MeshStandardMaterial({ map: frontTex, roughness: 0.3 }) : defaultMat,
-    backTex ? new THREE.MeshStandardMaterial({ map: backTex, roughness: 0.4 }) : defaultMat
+    createProductMaterial(rightTex), // Right (+X)
+    createProductMaterial(leftTex),  // Left (-X)
+    createProductMaterial(topTex),   // Top (+Y)
+    createProductMaterial(null),     // Bottom (-Y)
+    createProductMaterial(frontTex), // Front (+Z)
+    createProductMaterial(backTex)   // Back (-Z)
   ];
 
-  state.productMesh = new THREE.Mesh(geometry, materials);
+  const outerMesh = new THREE.Mesh(geometry, materials);
+
+  // Group inner chassis + outer textured mesh
+  state.productMesh = new THREE.Group();
+  state.productMesh.add(chassisMesh);
+  state.productMesh.add(outerMesh);
+
   state.productMesh.position.set(0, -0.2, 0);
   state.threeScene.add(state.productMesh);
 
@@ -483,7 +512,7 @@ function handleAddProductSubmit(e) {
   }
 
   const frontFile = form.imgFront.files[0];
-  const frontUrl = frontFile ? URL.createObjectURL(frontFile) : 'product info/Tủ lạnh/front.jpg';
+  const frontUrl = frontFile ? URL.createObjectURL(frontFile) : 'product info/Tủ lạnh/front_processed.png';
   const leftFile = form.imgLeft.files[0];
   const leftUrl = leftFile ? URL.createObjectURL(leftFile) : frontUrl;
   const rightFile = form.imgRight.files[0];

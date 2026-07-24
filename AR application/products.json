@@ -12,14 +12,14 @@
       "unit": "cm"
     },
     "images": {
-      "front": "product info/Tủ lạnh/front.jpg",
-      "frontLight": "product info/Tủ lạnh/front - light.jpg",
-      "left": "product info/Tủ lạnh/left.jpg",
-      "right": "product info/Tủ lạnh/right.jpg",
-      "side": "product info/Tủ lạnh/side.jpg",
-      "top": "product info/máy lạnh/top.jpg",
-      "detail1": "product info/Tủ lạnh/detail-1.jpg",
-      "detail2": "product info/Tủ lạnh/detail-2.jpg"
+      "front": "product info/Tủ lạnh/front_processed.png",
+      "frontLight": "product info/Tủ lạnh/front - light_processed.png",
+      "left": "product info/Tủ lạnh/left_processed.png",
+      "right": "product info/Tủ lạnh/right_processed.png",
+      "side": "product info/Tủ lạnh/side_processed.png",
+      "top": "product info/máy lạnh/top_processed.png",
+      "detail1": "product info/Tủ lạnh/detail-1_processed.png",
+      "detail2": "product info/Tủ lạnh/detail-2_processed.png"
     },
     "description": "Tủ lạnh dung tích lớn với bề mặt thép không gỉ hiện đại, thiết kế cửa Multi-Door cao cấp."
   },
@@ -36,13 +36,13 @@
       "unit": "cm"
     },
     "images": {
-      "front": "product info/Máy giặt/front.jpg",
-      "back": "product info/Máy giặt/back.jpg",
-      "left": "product info/Máy giặt/left.jpg",
-      "right": "product info/Máy giặt/right.jpg",
-      "top": "product info/Máy giặt/above.avif",
-      "under": "product info/Máy giặt/under.avif",
-      "control": "product info/Máy giặt/bảng điều khiển.avif"
+      "front": "product info/Máy giặt/front_processed.png",
+      "back": "product info/Máy giặt/back_processed.png",
+      "left": "product info/Máy giặt/left_processed.png",
+      "right": "product info/Máy giặt/right_processed.png",
+      "top": "product info/Máy giặt/above_processed.png",
+      "under": "product info/Máy giặt/under_processed.png",
+      "control": "product info/Máy giặt/bảng điều khiển_processed.png"
     },
     "description": "Tháp giặt sấy tích hợp 2 trong 1 thiết kế đứng tiết kiệm diện tích, điều khiển cảm ứng thông minh."
   },
@@ -59,11 +59,11 @@
       "unit": "cm"
     },
     "images": {
-      "front": "product info/TV OLED/front.jpg",
-      "back": "product info/TV OLED/back.jpg",
-      "left": "product info/TV OLED/left.jpg",
-      "right": "product info/TV OLED/right.jpg",
-      "both": "product info/TV OLED/both side.jpg"
+      "front": "product info/TV OLED/front_processed.png",
+      "back": "product info/TV OLED/back_processed.png",
+      "left": "product info/TV OLED/left_processed.png",
+      "right": "product info/TV OLED/right_processed.png",
+      "both": "product info/TV OLED/both side_processed.png"
     },
     "description": "TV OLED siêu mỏng 83 inch hình ảnh sắc nét, tích hợp chân đế để bàn hợp kim sang trọng."
   },
@@ -80,10 +80,10 @@
       "unit": "cm"
     },
     "images": {
-      "front": "product info/TV OLED/front.jpg",
-      "back": "product info/TV OLED/back.jpg",
-      "left": "product info/TV OLED/left.jpg",
-      "right": "product info/TV OLED/right.jpg"
+      "front": "product info/TV OLED/front_processed.png",
+      "back": "product info/TV OLED/back_processed.png",
+      "left": "product info/TV OLED/left_processed.png",
+      "right": "product info/TV OLED/right_processed.png"
     },
     "description": "TV OLED thiết kế gallery áp tường siêu mỏng, tối ưu cho góc nhìn phòng khách hiện đại."
   },
@@ -100,11 +100,11 @@
       "unit": "cm"
     },
     "images": {
-      "front": "product info/máy lạnh/front.jpg",
-      "frontOpen": "product info/máy lạnh/front - open.jpg",
-      "top": "product info/máy lạnh/top.jpg",
-      "left": "product info/máy lạnh/left.jpg",
-      "right": "product info/máy lạnh/right.jpg"
+      "front": "product info/máy lạnh/front_processed.png",
+      "frontOpen": "product info/máy lạnh/front - open_processed.png",
+      "top": "product info/máy lạnh/top_processed.png",
+      "left": "product info/máy lạnh/left_processed.png",
+      "right": "product info/máy lạnh/right_processed.png"
     },
     "description": "Máy lạnh treo tường công nghệ Inverter tiết kiệm điện, thiết kế bo cong thanh lịch."
   }
