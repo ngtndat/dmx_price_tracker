@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>AR Product Placement - Thử Sản Phẩm Thực Tế Tăng Cường AR 1:1</title>
+
+  <!-- SEO Meta Tags -->
+  <meta name="description" content="Ứng dụng Web App AR cho phép quét và xem vị trí đặt Tủ lạnh, Máy giặt, TV OLED, Máy lạnh trực tiếp trong không gian phòng thực tế tỉ lệ 1:1 qua camera điện thoại.">
+  <meta name="keywords" content="Augmented Reality, WebXR, AR Product Viewer, Model Viewer, 3D Product AR">
+
+  <!-- Remix Icons & Google Fonts -->
+  <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Three.js 3D & GLTF Exporter Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
+
+  <!-- Google <model-viewer> WebXR / AR Engine -->
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+</head>
+<body>
+
+  <!-- Sticky Navbar Header -->
+  <header>
+    <div class="nav-container">
+      <a href="#" class="brand">
+        <div class="brand-icon">
+          <i class="ri-cube-fill"></i>
+        </div>
+        <div>
+          <div class="brand-title">AR SpaceVision</div>
+        </div>
+        <span class="brand-tag">Tỉ Lệ 1:1</span>
+      </a>
+
+      <div class="nav-actions">
+        <button class="btn btn-glass" id="btnOpenUpload">
+          <i class="ri-add-circle-line"></i> Thêm Sản Phẩm Mới
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-content">
+      <h1>Trải Nghiệm Đặt Sản Phẩm <span>AR Thực Tế Tăng Cường</span></h1>
+      <p>Chọn thiết bị điện máy, sử dụng camera điện thoại để quét sàn hoặc tường phòng khách/phòng ngủ và thấy ngay sản phẩm đặt đúng vị trí với kích thước thực 1:1.</p>
+      
+      <div class="hero-features">
+        <div class="feature-pill">
+          <i class="ri-shield-check-fill"></i> Tỉ lệ chính xác 1:1 (cm)
+        </div>
+        <div class="feature-pill">
+          <i class="ri-smartphone-line"></i> Chạy 100% Web (Không cần app)
+        </div>
+      </div>
+    </div>
+
+    <div class="hero-preview">
+      <span class="hero-preview-badge">
+        <i class="ri-camera-lens-line"></i> Camera WebXR Ready
+      </span>
+      <i class="ri-box-3-fill" style="font-size: 5rem; color: var(--primary); opacity: 0.8; margin-bottom: 1rem;"></i>
+      <p style="color: var(--text-muted); font-size: 0.95rem; text-align: center;">Chạm vào bất kỳ sản phẩm nào bên dưới để bật Camera AR và quét phòng của bạn.</p>
+    </div>
+  </section>
+
+  <!-- Main Content & Catalog -->
+  <main class="main-content">
+    
+    <!-- Category Filter Chips -->
+    <div class="category-bar">
+      <button class="category-chip active" data-category="all">Tất cả sản phẩm</button>
+      <button class="category-chip" data-category="refrigerator">Tủ lạnh</button>
+      <button class="category-chip" data-category="washer">Máy giặt / Tháp giặt</button>
+      <button class="category-chip" data-category="tv">TV OLED</button>
+      <button class="category-chip" data-category="ac">Máy lạnh / Điều hòa</button>
+    </div>
+
+    <!-- Product Cards Grid -->
+    <div class="products-grid" id="productsGrid">
+      <!-- Dynamic rendering via app.js -->
+    </div>
+
+  </main>
+
+  <!-- Fullscreen AR / 3D Model Viewer Modal -->
+  <div class="modal-overlay" id="arModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title" id="arModalTitle">Trình Xem AR 1:1</h2>
+        <button class="modal-close" id="arModalClose"><i class="ri-close-line"></i></button>
+      </div>
+
+      <div class="ar-viewport-container">
+        <!-- Google <model-viewer> with AR Enabled -->
+        <model-viewer 
+          id="modelViewer"
+          ar
+          ar-modes="webxr scene-viewer quick-look"
+          camera-controls
+          auto-rotate
+          shadow-intensity="1"
+          shadow-softness="0.5"
+          exposure="1"
+          alt="Mô hình 3D AR Sản phẩm"
+        >
+        </model-viewer>
+
+        <!-- Floating Dimension Badge -->
+        <div class="ar-badge-scale" id="scaleBadge">
+          <i class="ri-ruler-line"></i> Kích thước chuẩn
+        </div>
+
+        <!-- AR Launch Button Overlay for Mobile -->
+        <div class="ar-floating-controls">
+          <button class="btn btn-primary" id="btnTriggerAR">
+            <i class="ri-qr-scan-2-line"></i> Mở Camera Đặt AR Trong Phòng
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Upload / Add Custom Product Modal -->
+  <div class="modal-overlay" id="uploadModal">
+    <div class="modal-card" style="max-width: 650px;">
+      <div class="modal-header">
+        <h2 class="modal-title">Thêm Thông Số & Hình Ảnh Sản Phẩm Mới</h2>
+        <button class="modal-close" id="uploadModalClose"><i class="ri-close-line"></i></button>
+      </div>
+
+      <form id="addProductForm" class="form-grid">
+        <div class="form-group full-width">
+          <label class="form-label">Tên sản phẩm *</label>
+          <input type="text" id="prodName" class="form-input" placeholder="Ví dụ: Tủ lạnh LG Inverter 600L" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Danh mục sản phẩm *</label>
+          <select id="prodCategory" class="form-select" required>
+            <option value="Tủ lạnh">Tủ lạnh</option>
+            <option value="Máy giặt">Máy giặt / Tháp giặt</option>
+            <option value="TV OLED">TV OLED</option>
+            <option value="Máy lạnh">Máy lạnh / Điều hòa</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Vị trí đặt AR trong phòng *</label>
+          <select id="prodPlacement" class="form-select" required>
+            <option value="floor">Đặt trên sàn (Floor)</option>
+            <option value="wall">Treo trên tường (Wall)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Chiều cao (Height - cm) *</label>
+          <input type="number" step="0.1" id="prodHeight" class="form-input" placeholder="178.7" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Chiều ngang (Width - cm) *</label>
+          <input type="number" step="0.1" id="prodWidth" class="form-input" placeholder="83.5" required>
+        </div>
+
+        <div class="form-group full-width">
+          <label class="form-label">Chiều sâu (Depth - cm) *</label>
+          <input type="number" step="0.1" id="prodDepth" class="form-input" placeholder="73.0" required>
+        </div>
+
+        <div class="form-group full-width">
+          <label class="form-label">Upload hình ảnh các góc (Mặt trước, Trái, Phải, Sau)</label>
+          <div class="angle-upload-grid">
+            <label class="angle-box">
+              <i class="ri-image-add-line"></i>
+              <span>Mặt trước *</span>
+              <input type="file" id="imgFront" accept="image/*" style="display:none">
+            </label>
+            <label class="angle-box">
+              <i class="ri-image-add-line"></i>
+              <span>Mặt trái</span>
+              <input type="file" id="imgLeft" accept="image/*" style="display:none">
+            </label>
+            <label class="angle-box">
+              <i class="ri-image-add-line"></i>
+              <span>Mặt phải</span>
+              <input type="file" id="imgRight" accept="image/*" style="display:none">
+            </label>
+            <label class="angle-box">
+              <i class="ri-image-add-line"></i>
+              <span>Mặt sau</span>
+              <input type="file" id="imgBack" accept="image/*" style="display:none">
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group full-width" style="margin-top: 1rem;">
+          <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+            <i class="ri-save-line"></i> Lưu Sản Phẩm & Tạo Mô Hình AR 3D
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

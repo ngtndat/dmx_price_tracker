@@ -1,0 +1,111 @@
+[
+  {
+    "id": "refrigerator-lg",
+    "name": "Tủ lạnh LG Inverter Multi-Door",
+    "category": "Tủ lạnh",
+    "categoryKey": "refrigerator",
+    "placement": "floor",
+    "dimensions": {
+      "height": 178.7,
+      "width": 83.5,
+      "depth": 73.0,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "product info/Tủ lạnh/front.jpg",
+      "frontLight": "product info/Tủ lạnh/front - light.jpg",
+      "left": "product info/Tủ lạnh/left.jpg",
+      "right": "product info/Tủ lạnh/right.jpg",
+      "side": "product info/Tủ lạnh/side.jpg",
+      "top": "product info/máy lạnh/top.jpg",
+      "detail1": "product info/Tủ lạnh/detail-1.jpg",
+      "detail2": "product info/Tủ lạnh/detail-2.jpg"
+    },
+    "description": "Tủ lạnh dung tích lớn với bề mặt thép không gỉ hiện đại, thiết kế cửa Multi-Door cao cấp."
+  },
+  {
+    "id": "washer-tower-lg",
+    "name": "Tháp giặt sấy LG WashTower",
+    "category": "Máy giặt",
+    "categoryKey": "washer",
+    "placement": "floor",
+    "dimensions": {
+      "height": 165.5,
+      "width": 60.0,
+      "depth": 66.0,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "product info/Máy giặt/front.jpg",
+      "back": "product info/Máy giặt/back.jpg",
+      "left": "product info/Máy giặt/left.jpg",
+      "right": "product info/Máy giặt/right.jpg",
+      "top": "product info/Máy giặt/above.avif",
+      "under": "product info/Máy giặt/under.avif",
+      "control": "product info/Máy giặt/bảng điều khiển.avif"
+    },
+    "description": "Tháp giặt sấy tích hợp 2 trong 1 thiết kế đứng tiết kiệm diện tích, điều khiển cảm ứng thông minh."
+  },
+  {
+    "id": "tv-oled-stand",
+    "name": "TV OLED 4K (Có chân đế)",
+    "category": "TV OLED",
+    "categoryKey": "tv",
+    "placement": "floor",
+    "dimensions": {
+      "height": 109.9,
+      "width": 185.1,
+      "depth": 29.0,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "product info/TV OLED/front.jpg",
+      "back": "product info/TV OLED/back.jpg",
+      "left": "product info/TV OLED/left.jpg",
+      "right": "product info/TV OLED/right.jpg",
+      "both": "product info/TV OLED/both side.jpg"
+    },
+    "description": "TV OLED siêu mỏng 83 inch hình ảnh sắc nét, tích hợp chân đế để bàn hợp kim sang trọng."
+  },
+  {
+    "id": "tv-oled-wall",
+    "name": "TV OLED 4K (Treo tường - Không chân đế)",
+    "category": "TV OLED",
+    "categoryKey": "tv",
+    "placement": "wall",
+    "dimensions": {
+      "height": 105.5,
+      "width": 185.1,
+      "depth": 5.53,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "product info/TV OLED/front.jpg",
+      "back": "product info/TV OLED/back.jpg",
+      "left": "product info/TV OLED/left.jpg",
+      "right": "product info/TV OLED/right.jpg"
+    },
+    "description": "TV OLED thiết kế gallery áp tường siêu mỏng, tối ưu cho góc nhìn phòng khách hiện đại."
+  },
+  {
+    "id": "air-conditioner-lg",
+    "name": "Máy lạnh / Điều hòa Inverter Treo tường",
+    "category": "Máy lạnh",
+    "categoryKey": "ac",
+    "placement": "wall",
+    "dimensions": {
+      "height": 30.7,
+      "width": 79.9,
+      "depth": 23.5,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "product info/máy lạnh/front.jpg",
+      "frontOpen": "product info/máy lạnh/front - open.jpg",
+      "top": "product info/máy lạnh/top.jpg",
+      "left": "product info/máy lạnh/left.jpg",
+      "right": "product info/máy lạnh/right.jpg"
+    },
+    "description": "Máy lạnh treo tường công nghệ Inverter tiết kiệm điện, thiết kế bo cong thanh lịch."
+  }
+]
