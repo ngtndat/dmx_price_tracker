@@ -3,7 +3,7 @@ name: DMX Price Scraper Cron (Every 2 Hours)
 on:
   schedule:
     # Runs automatically every 2 hours
-    - cron: '0 */2 * * *'
+#    - cron: '0 */2 * * *'
   workflow_dispatch:
 
 jobs:
