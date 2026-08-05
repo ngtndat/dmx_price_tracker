@@ -23,9 +23,10 @@ TELEGRAM_CHAT_ID = "5226929253"
 #    Định dạng: [(giờ, phút), ...]
 SCHEDULE_TIMES = [(7, 0), (9, 30), (12, 0), (16, 0), (20, 0)]
 
-# 6. Chụp ảnh Sheet gửi Telegram (có thể để rỗng "" để bỏ qua):
-#    Ví dụ: "A1:I30" sẽ chụp từ cột A hàng 1 đến cột I hàng 30.
-SCREENSHOT_RANGE = "A1:I30"
+# 6. Chụp ảnh Sheet gửi Telegram (các vùng ô cụ thể cần chụp):
+SCREENSHOT_RANGE = ["B3:T13", "B21:T44"]
+# Tab (Sheet) dùng để chụp ảnh báo cáo:
+SCREENSHOT_SHEET_NAME = "DB"
 
 
 # ⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐⭐
@@ -527,10 +528,90 @@ def scrape_fpt(url="https://fptshop.com.vn/may-lanh-dieu-hoa/lg"):
     return []
 
 # ==============================================================================
-# 6. MEDIAMART SCRAPER (Lọc trùng lặp URL)
+# 6. CAO THIEN PHAT SCRAPER (CTP)
+# ==============================================================================
+def scrape_ctp(url="https://caothienphat.com/danhmuc/thiet-bi-gia-dinh/may-lanh-dieu-hoa/?_brand=lg"):
+    global FPT_PROXIES
+    print(f"\n--- 6. CÀO CAO THIÊN PHÁT (CTP) ---")
+    
+    response = None
+    # 1. Thử trực tiếp trước
+    try:
+        response = requests.get(url, headers=HEADERS, verify=False, timeout=12)
+        if response.status_code != 200:
+            print(f"  [!] Thử trực tiếp thất bại (HTTP {response.status_code}). Chuyển sang dùng proxy...")
+            response = None
+    except Exception as e:
+        print(f"  [!] Lỗi kết nối trực tiếp: {e}. Chuyển sang dùng proxy...")
+        response = None
+
+    # 2. Dự phòng: Dùng proxy xoay vòng Việt Nam
+    if response is None and FPT_PROXIES:
+        for idx, proxy in enumerate(FPT_PROXIES, 1):
+            print(f"  [{idx}/{len(FPT_PROXIES)}] Thử cào Cao Thiên Phát qua proxy VN: {proxy}...")
+            proxies = {"http": f"http://{proxy}", "https": f"http://{proxy}"}
+            try:
+                r = requests.get(url, headers=HEADERS, proxies=proxies, verify=False, timeout=10)
+                if r.status_code == 200 and "product-small" in r.text:
+                    print(f"  [Thành công] Tải trang Cao Thiên Phát thành công qua proxy {proxy}!")
+                    response = r
+                    break
+                else:
+                    print(f"  [!] Proxy phản hồi HTTP {r.status_code}")
+            except Exception as e:
+                print(f"  [!] Lỗi proxy: {e}")
+
+    if not response:
+        print("[!] Không thể kết nối tới Cao Thiên Phát (cả trực tiếp và proxy đều thất bại).")
+        return []
+
+    try:
+        soup = BeautifulSoup(response.text, "html.parser")
+        items = soup.find_all(class_="product-small")
+        items = [item for item in items if 'col' in item.get('class', [])]
+        print(f"Tìm thấy {len(items)} sản phẩm trên Cao Thiên Phát.")
+        results = []
+        for idx, item in enumerate(items, 1):
+            title_p = item.find(class_="woocommerce-loop-product__title")
+            if not title_p: continue
+            a_link = title_p.find("a")
+            if not a_link: continue
+            model_name = clean_text(a_link.text)
+            href = a_link.get("href")
+            full_link = href.split("?")[0]
+            
+            price_wrapper = item.find(class_="price-wrapper")
+            selling_price = "0"
+            mrp_price = "0"
+            if price_wrapper:
+                ins_tag = price_wrapper.find("ins")
+                if ins_tag:
+                    selling_price = clean_price(ins_tag.text)
+                else:
+                    price_amount = price_wrapper.find(class_="woocommerce-Price-amount")
+                    if price_amount: selling_price = clean_price(price_amount.text)
+                del_tag = price_wrapper.find("del")
+                if del_tag:
+                    mrp_price = clean_price(del_tag.text)
+                else:
+                    mrp_price = selling_price
+            
+            print(f"[{idx}/{len(items)}] CTP: {model_name}")
+            results.append({
+                "Page Title": "CaoThienPhat", "Tên Model": model_name, "Status": "đang kinh doanh", "direct product link": full_link,
+                "MRP price": format_price(mrp_price), "Selling price": format_price(selling_price),
+                "Thông tin chương trình khuyến mãi": "Xem khuyến mãi tại link sản phẩm."
+            })
+        return results
+    except Exception as e:
+        print(f"[!] Lỗi phân tích dữ liệu Cao Thiên Phát: {e}")
+        return []
+
+# ==============================================================================
+# 7. MEDIAMART SCRAPER (Lọc trùng lặp URL)
 # ==============================================================================
 def scrape_mediamart(url="https://mediamart.vn/dieu-hoa-nhiet-do-lg"):
-    print(f"\n--- 6. CÀO MEDIAMART ---")
+    print(f"\n--- 7. CÀO MEDIAMART ---")
     try:
         response = requests.get(url, headers=HEADERS, verify=False, timeout=15)
         if response.status_code != 200:
@@ -572,7 +653,7 @@ def scrape_mediamart(url="https://mediamart.vn/dieu-hoa-nhiet-do-lg"):
         return []
 
 # ==============================================================================
-# 7. HC SCRAPER (Sitemap + Parse trang chi tiết tĩnh)
+# 8. HC SCRAPER (Sitemap + Parse trang chi tiết tĩnh)
 # ==============================================================================
 def fetch_with_proxy(url, proxies_list, min_length=1000):
     """Fetch URL qua proxy xoay vòng Việt Nam (dùng cho Google Colab bị geoblock)."""
@@ -589,7 +670,7 @@ def fetch_with_proxy(url, proxies_list, min_length=1000):
 
 def scrape_hc(url="https://hc.com.vn/ords/cat/dieu-hoa/lg"):
     global FPT_PROXIES
-    print(f"\n--- 7. CÀO HỆ THỐNG HC (Sitemap) ---")
+    print(f"\n--- 8. CÀO HỆ THỐNG HC (Sitemap) ---")
     
     # Xác định keyword lọc sản phẩm từ URL danh mục
     # vd: /dieu-hoa/lg -> "dieu-hoa" + "lg", /loc-khong-khi -> "loc-khong-khi"
@@ -747,9 +828,12 @@ def send_telegram_summary(all_data, source_counts, next_run_str=None, error_msg=
 # SHEET SCREENSHOT → TELEGRAM (Chụp ảnh vùng ô và gửi Telegram)
 # ==============================================================================
 def send_sheet_screenshot_telegram(gc):
-    """Đọc dữ liệu từ SCREENSHOT_RANGE, render thành ảnh bảng PNG, gửi Telegram."""
+    """Đọc dữ liệu từ danh sách SCREENSHOT_RANGE của tab SCREENSHOT_SHEET_NAME, render thành ảnh, gửi Telegram."""
     if not SCREENSHOT_RANGE or not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         return
+    
+    # Chuẩn hóa SCREENSHOT_RANGE thành list
+    ranges = SCREENSHOT_RANGE if isinstance(SCREENSHOT_RANGE, list) else [SCREENSHOT_RANGE]
     
     try:
         import matplotlib
@@ -757,90 +841,93 @@ def send_sheet_screenshot_telegram(gc):
         import matplotlib.pyplot as plt
         import io as _io
         
-        print(f"\n--- CHỤP ẢNH SHEET [{SCREENSHOT_RANGE}] GỬi TELEGRAM ---")
-        
-        # Lấy dữ liệu từ Google Sheets
+        # Mở Google Sheet
         sh = gc.open_by_url(SPREADSHEET_URL)
         try:
-            sheet = sh.worksheet(SHEET_NAME)
+            sheet = sh.worksheet(SCREENSHOT_SHEET_NAME)
         except Exception:
+            # Fallback nếu không có sheet DB
+            print(f"[!] Không tìm thấy tab '{SCREENSHOT_SHEET_NAME}', tự động chuyển sang tab đầu tiên.")
             sheet = sh.get_worksheet(0)
-        
-        raw = sheet.get(SCREENSHOT_RANGE)
-        if not raw:
-            print("[!] Không có dữ liệu trong vùng ô này.")
-            return
-        
-        # Chuẩn hóa số cột
-        max_cols = max(len(r) for r in raw)
-        data = [r + [''] * (max_cols - len(r)) for r in raw]
-        
-        headers = data[0] if data else []
-        rows    = data[1:] if len(data) > 1 else [[''] * max_cols]
-        
-        # Tạo hình
-        fig_w = max(14, max_cols * 2.0)
-        fig_h = max(3, len(rows) * 0.45 + 1.2)
-        fig, ax = plt.subplots(figsize=(fig_w, fig_h))
-        ax.axis('off')
-        ax.set_facecolor('#FAFAFA')
-        fig.patch.set_facecolor('#FAFAFA')
-        
-        tbl = ax.table(
-            cellText=rows,
-            colLabels=headers,
-            loc='center',
-            cellLoc='center'
-        )
-        tbl.auto_set_font_size(False)
-        tbl.set_fontsize(8)
-        tbl.scale(1, 1.7)
-        
-        # Header style (xánh đậm)
-        for j in range(max_cols):
-            cell = tbl[0, j]
-            cell.set_facecolor('#1E3A5F')
-            cell.set_text_props(color='white', fontweight='bold', fontsize=8)
-            cell.set_edgecolor('#FFFFFF')
-        
-        # Hàng alternating
-        for i in range(len(rows)):
-            bg = '#E8F0FE' if i % 2 == 0 else '#FFFFFF'
+            
+        for r_idx, cell_range in enumerate(ranges, 1):
+            print(f"\n--- CHỤP ẢNH SHEET [{cell_range}] GỬI TELEGRAM ---")
+            raw = sheet.get(cell_range)
+            if not raw:
+                print(f"[!] Không có dữ liệu trong vùng ô {cell_range}. Bỏ qua.")
+                continue
+            
+            # Chuẩn hóa dữ liệu thành ma trận chữ nhật đều nhau
+            max_cols = max(len(r) for r in raw)
+            data = [r + [''] * (max_cols - len(r)) for r in raw]
+            
+            # Tách header và dòng dữ liệu
+            headers = data[0] if data else []
+            rows = data[1:] if len(data) > 1 else [[''] * max_cols]
+            
+            # Tạo kích thước hình vẽ linh hoạt theo kích thước bảng dữ liệu
+            fig_w = max(16, max_cols * 1.5)
+            fig_h = max(4, len(rows) * 0.45 + 1.2)
+            fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+            ax.axis('off')
+            ax.set_facecolor('#FAFAFA')
+            fig.patch.set_facecolor('#FAFAFA')
+            
+            tbl = ax.table(
+                cellText=rows,
+                colLabels=headers,
+                loc='center',
+                cellLoc='center'
+            )
+            tbl.auto_set_font_size(False)
+            tbl.set_fontsize(8)
+            tbl.scale(1, 1.7)
+            
+            # Style header (xanh Navy đậm)
             for j in range(max_cols):
-                cell = tbl[i + 1, j]
-                cell.set_facecolor(bg)
-                cell.set_edgecolor('#CCCCCC')
-        
-        now_str = datetime.now(TZ_VN).strftime("%d/%m/%Y %H:%M")
-        plt.title(
-            f"📅 Dữ liệu Máy Lạnh LG — {now_str} (GMT+7)",
-            fontsize=10, fontweight='bold', pad=12, color='#1E3A5F'
-        )
-        
-        # Lưu vào buffer
-        buf = _io.BytesIO()
-        plt.savefig(buf, format='png', bbox_inches='tight', dpi=150, facecolor='#FAFAFA')
-        buf.seek(0)
-        plt.close(fig)
-        
-        # Gửi lên Telegram
-        tg_caption = (
-            f"📊 <b>Snapshot dữ liệu Sheet</b>\n"
-            f"🔍 Vùng ô: <code>{SCREENSHOT_RANGE}</code>  |  Tab: <code>{SHEET_NAME}</code>\n"
-            f"📅 {now_str} (GMT+7)"
-        )
-        send_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
-        files   = {'photo': ('sheet_snapshot.png', buf, 'image/png')}
-        payload = {'chat_id': TELEGRAM_CHAT_ID, 'caption': tg_caption, 'parse_mode': 'HTML'}
-        res = requests.post(send_url, files=files, data=payload, timeout=30)
-        
-        if res.status_code == 200:
-            print(f"[OK] Đã gửi ảnh snapshot Sheet ({SCREENSHOT_RANGE}) lên Telegram!")
-        else:
-            print(f"[!] Telegram sendPhoto lỗi {res.status_code}: {res.text[:200]}")
-    
+                cell = tbl[0, j]
+                cell.set_facecolor('#1F4E79')
+                cell.set_text_props(color='white', fontweight='bold', fontsize=8)
+                cell.set_edgecolor('#FFFFFF')
+            
+            # Style hàng dữ liệu (xen kẽ màu)
+            for i in range(len(rows)):
+                bg = '#F2F6FA' if i % 2 == 0 else '#FFFFFF'
+                for j in range(max_cols):
+                    cell = tbl[i + 1, j]
+                    cell.set_facecolor(bg)
+                    cell.set_edgecolor('#D9D9D9')
+            
+            now_str = datetime.now(TZ_VN).strftime("%d/%m/%Y %H:%M")
+            plt.title(
+                f"📊 Snapshot Bảng {r_idx} ({cell_range}) — {now_str} (GMT+7)",
+                fontsize=11, fontweight='bold', pad=12, color='#1F4E79'
+            )
+            
+            # Lưu vào bộ nhớ tạm
+            buf = _io.BytesIO()
+            plt.savefig(buf, format='png', bbox_inches='tight', dpi=150, facecolor='#FAFAFA')
+            buf.seek(0)
+            plt.close(fig)
+            
+            # Gửi tin nhắn chứa ảnh lên Telegram
+            tg_caption = (
+                f"📊 <b>Snapshot dữ liệu Sheet - Bảng {r_idx}</b>\n"
+                f"🔍 Vùng ô: <code>{cell_range}</code>  |  Tab: <code>{sheet.title}</code>\n"
+                f"📅 {now_str} (GMT+7)"
+            )
+            send_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+            files = {'photo': (f'sheet_snapshot_{r_idx}.png', buf, 'image/png')}
+            payload = {'chat_id': TELEGRAM_CHAT_ID, 'caption': tg_caption, 'parse_mode': 'HTML'}
+            res = requests.post(send_url, files=files, data=payload, timeout=30)
+            
+            if res.status_code == 200:
+                print(f"[OK] Đã gửi ảnh snapshot vùng {cell_range} lên Telegram!")
+            else:
+                print(f"[!] Telegram sendPhoto lỗi {res.status_code}: {res.text[:200]}")
+                
     except Exception as e:
-        print(f"[!] Không thể chụp/gửi ảnh Sheet: {e}")
+        print(f"[!] Lỗi chụp/gửi ảnh báo cáo: {e}")
 
 
 # ==============================================================================
@@ -924,6 +1011,7 @@ def run_scraper_job(gc, next_run_str=None):
     run_and_count(scrape_nk, "https://www.nguyenkim.com/may-lanh-lg")
     run_and_count(scrape_cps, "https://cellphones.com.vn/may-lanh/lg.html")
     run_and_count(scrape_fpt, "https://fptshop.com.vn/may-lanh-dieu-hoa/lg")
+    run_and_count(scrape_ctp, "https://caothienphat.com/danhmuc/thiet-bi-gia-dinh/may-lanh-dieu-hoa/?_brand=lg")
     run_and_count(scrape_mediamart, "https://mediamart.vn/dieu-hoa-nhiet-do-lg")
     run_and_count(scrape_hc, "https://hc.com.vn/ords/cat/dieu-hoa/lg")
     
