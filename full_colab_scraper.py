@@ -1121,17 +1121,24 @@ def main():
     if not gc:
         return
     
-    # Hỏi người dùng muốn chạy ngay hay chờ theo lịch
-    print("\n" + "="*70)
-    print("Bạn muốn:")
-    print("  [1] Chạy quét NGAY BÂY GIỜ")
-    print("  [2] Chờ và chạy tự động theo LỊCH (7:00 / 9:30 / 12:00 / 16:00 / 20:00)")
-    print("="*70)
+    # Kiểm tra xem có đang chạy tự động trên GitHub Actions hay không
+    is_github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
     
-    try:
-        choice = input("Nhập lựa chọn (1 hoặc 2, mặc định = 1): ").strip()
-    except Exception:
-        choice = "1"  # Nếu không nhập được (ví dụ chạy non-interactive), chạy ngay
+    if is_github_actions:
+        print("[Tự động] Phát hiện chạy trên GitHub Actions. Tự động chọn quét NGAY BÂY GIỜ.")
+        choice = "1"
+    else:
+        # Hỏi người dùng muốn chạy ngay hay chờ theo lịch (khi chạy local/Colab thủ công)
+        print("\n" + "="*70)
+        print("Bạn muốn:")
+        print("  [1] Chạy quét NGAY BÂY GIỜ")
+        print("  [2] Chờ và chạy tự động theo LỊCH (7:00 / 9:30 / 12:00 / 16:00 / 20:00)")
+        print("="*70)
+        
+        try:
+            choice = input("Nhập lựa chọn (1 hoặc 2, mặc định = 1): ").strip()
+        except Exception:
+            choice = "1"  # Nếu không nhập được, mặc định chạy ngay
     
     if choice == "2":
         start_scheduler(gc)
