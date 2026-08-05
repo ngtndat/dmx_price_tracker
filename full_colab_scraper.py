@@ -30,7 +30,7 @@ TELEGRAM_CHAT_ID = "5226929253"
 SCHEDULE_TIMES = [(7, 0), (9, 30), (12, 0), (16, 0), (20, 0)]
 
 # 6. Chụp ảnh Sheet gửi Telegram (các vùng ô cụ thể cần chụp):
-SCREENSHOT_RANGE = ["B3:T13", "B21:T44"]
+SCREENSHOT_RANGE = ["B3:T13"]
 # Tab (Sheet) dùng để chụp ảnh báo cáo:
 SCREENSHOT_SHEET_NAME = "DB"
 
@@ -762,8 +762,8 @@ def scrape_hc(url="https://hc.com.vn/ords/cat/loc-khong-khi/lg"):
 # ==============================================================================
 # TELEGRAM NOTIFIER
 # ==============================================================================
-def send_telegram_summary(all_data, source_counts, next_run_str=None, error_msg=None):
-    """Gửi thông báo tóm tắt kết quả quét lên Telegram."""
+def send_telegram_summary(all_data, price_changes, next_run_str=None, error_msg=None):
+    """Gửi thông báo tóm tắt kết quả quét và các sản phẩm thay đổi giá bán lên Telegram."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("[!] Chưa cấu hình Telegram. Bỏ qua gửi thông báo.")
         return
@@ -782,19 +782,22 @@ def send_telegram_summary(all_data, source_counts, next_run_str=None, error_msg=
         msg = (
             f"✅ <b>QUÉT HOÀN TẤT - MÁY LỌC KK & MÁY HÚT ẨM LG</b>\n"
             f"📅 <i>Thời gian: {now_str} (GMT+7)</i>\n"
+            f"📊 <b>Tổng sản phẩm cào được:</b> {total} sp\n"
             f"━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-            f"📊 <b>Tổng sản phẩm:</b> {total} sp\n"
-            f"🔢 <b>Chi tiết theo nguồn:</b>\n"
+            f"📈 <b>Biến động giá bán so với lần quét trước:</b>\n"
         )
-        source_icons = {
-            "DMX": "🟢", "DMCL": "🔵", "NguyenKim": "🟡",
-            "CellphoneS": "🟠", "FPT": "🔴", "CaoThienPhat": "🟣",
-            "MediaMart": "⚪", "HC": "🟤"
-        }
-        for src, count in source_counts.items():
-            icon = source_icons.get(src, "▪️")
-            msg += f"  {icon} {src}: <b>{count}</b> sp\n"
-        msg += f"📋 <b>Google Sheet:</b> <a href='{SPREADSHEET_URL}'>Xem tại đây</a>\n"
+        
+        if price_changes:
+            # Sắp xếp các biến động theo nguồn và mã model
+            sorted_changes = sorted(price_changes, key=lambda x: (x["source"], x["model"]))
+            for item in sorted_changes:
+                old_val = item["old"] + "K" if item["old"] != "N/A" else "N/A"
+                new_val = item["new"] + "K" if item["new"] != "N/A" else "N/A"
+                msg += f"• <b>{item['model']}</b> ({item['source']}): {old_val} ➔ <b>{new_val}</b>\n"
+        else:
+            msg += "<i>Không có biến động giá so với lần quét trước.</i>\n"
+            
+        msg += f"\n📋 <b>Google Sheet:</b> <a href='{SPREADSHEET_URL}'>Xem tại đây</a>\n"
     
     if next_run_str:
         msg += f"━━━━━━━━━━━━━━━━━━━━━━━━━\n⏰ <b>Lần quét tiếp theo:</b> {next_run_str}\n"
@@ -1021,7 +1024,7 @@ def run_scraper_job(gc, next_run_str=None):
     
     if not all_data:
         print("[!] Không thu thập được dữ liệu nào.")
-        send_telegram_summary([], {}, next_run_str, error_msg="Không thu thập được dữ liệu nào từ tất cả các trang.")
+        send_telegram_summary([], [], next_run_str, error_msg="Không thu thập được dữ liệu nào từ tất cả các trang.")
         return
     
     print(f"\n[OK] Thu được {len(all_data)} sản phẩm từ {len(source_counts)} nguồn.")
@@ -1039,6 +1042,16 @@ def run_scraper_job(gc, next_run_str=None):
         values = sheet.get_all_values()
         has_header = len(values) > 0
         
+        # 1. Trích xuất giá bán ở lần quét trước từ Sheet hiện tại
+        last_prices = {}
+        if has_header and len(values) > 1:
+            for r in values[1:]:
+                if len(r) > 7:
+                    page_title = r[1].strip()
+                    model_code = r[2].strip()
+                    price_val = r[7].strip()
+                    last_prices[(page_title, model_code)] = price_val
+
         headers = ["Giờ quét", "Page Title", "Mã Model", "Tên Model", "Status",
                    "direct product link", "MRP price", "Selling price",
                    "Thông tin chương trình khuyến mãi"]
@@ -1047,10 +1060,25 @@ def run_scraper_job(gc, next_run_str=None):
             rows_to_append.append(headers)
         
         current_time = datetime.now(TZ_VN).strftime('%Y-%m-%d %H:%M:%S')
+        price_changes = []
+        
         for row in all_data:
             model_name = row["Tên Model"]
             prod_link = row["direct product link"]
             model_code = extract_model_code(model_name, prod_link)
+            
+            price_new = format_price_thousands(row["Selling price"])
+            price_old = last_prices.get((row["Page Title"], model_code), None)
+            
+            # Ghi nhận biến động giá (chỉ so sánh nếu đã có giá cũ được ghi nhận trên sheet)
+            if price_old is not None and price_old != price_new:
+                price_changes.append({
+                    "model": model_code,
+                    "source": row["Page Title"],
+                    "old": price_old,
+                    "new": price_new
+                })
+                
             rows_to_append.append([
                 current_time,
                 row["Page Title"],
@@ -1059,7 +1087,7 @@ def run_scraper_job(gc, next_run_str=None):
                 row["Status"],
                 prod_link,
                 format_price_thousands(row["MRP price"]),
-                format_price_thousands(row["Selling price"]),
+                price_new,
                 row["Thông tin chương trình khuyến mãi"]
             ])
         
@@ -1069,8 +1097,8 @@ def run_scraper_job(gc, next_run_str=None):
         print(f"👉 {SPREADSHEET_URL}")
         print("="*70)
         
-        # Gửi thông báo tóm tắt
-        send_telegram_summary(all_data, source_counts, next_run_str)
+        # Gửi thông báo tóm tắt với list biến động giá
+        send_telegram_summary(all_data, price_changes, next_run_str)
         # Gửi ảnh chụp Sheet
         send_sheet_screenshot_telegram(gc)
         
