@@ -528,90 +528,10 @@ def scrape_fpt(url="https://fptshop.com.vn/may-lanh-dieu-hoa/lg"):
     return []
 
 # ==============================================================================
-# 6. CAO THIEN PHAT SCRAPER (CTP)
-# ==============================================================================
-def scrape_ctp(url="https://caothienphat.com/danhmuc/thiet-bi-gia-dinh/may-lanh-dieu-hoa/?_brand=lg"):
-    global FPT_PROXIES
-    print(f"\n--- 6. CÀO CAO THIÊN PHÁT (CTP) ---")
-    
-    response = None
-    # 1. Thử trực tiếp trước
-    try:
-        response = requests.get(url, headers=HEADERS, verify=False, timeout=12)
-        if response.status_code != 200:
-            print(f"  [!] Thử trực tiếp thất bại (HTTP {response.status_code}). Chuyển sang dùng proxy...")
-            response = None
-    except Exception as e:
-        print(f"  [!] Lỗi kết nối trực tiếp: {e}. Chuyển sang dùng proxy...")
-        response = None
-
-    # 2. Dự phòng: Dùng proxy xoay vòng Việt Nam
-    if response is None and FPT_PROXIES:
-        for idx, proxy in enumerate(FPT_PROXIES, 1):
-            print(f"  [{idx}/{len(FPT_PROXIES)}] Thử cào Cao Thiên Phát qua proxy VN: {proxy}...")
-            proxies = {"http": f"http://{proxy}", "https": f"http://{proxy}"}
-            try:
-                r = requests.get(url, headers=HEADERS, proxies=proxies, verify=False, timeout=10)
-                if r.status_code == 200 and "product-small" in r.text:
-                    print(f"  [Thành công] Tải trang Cao Thiên Phát thành công qua proxy {proxy}!")
-                    response = r
-                    break
-                else:
-                    print(f"  [!] Proxy phản hồi HTTP {r.status_code}")
-            except Exception as e:
-                print(f"  [!] Lỗi proxy: {e}")
-
-    if not response:
-        print("[!] Không thể kết nối tới Cao Thiên Phát (cả trực tiếp và proxy đều thất bại).")
-        return []
-
-    try:
-        soup = BeautifulSoup(response.text, "html.parser")
-        items = soup.find_all(class_="product-small")
-        items = [item for item in items if 'col' in item.get('class', [])]
-        print(f"Tìm thấy {len(items)} sản phẩm trên Cao Thiên Phát.")
-        results = []
-        for idx, item in enumerate(items, 1):
-            title_p = item.find(class_="woocommerce-loop-product__title")
-            if not title_p: continue
-            a_link = title_p.find("a")
-            if not a_link: continue
-            model_name = clean_text(a_link.text)
-            href = a_link.get("href")
-            full_link = href.split("?")[0]
-            
-            price_wrapper = item.find(class_="price-wrapper")
-            selling_price = "0"
-            mrp_price = "0"
-            if price_wrapper:
-                ins_tag = price_wrapper.find("ins")
-                if ins_tag:
-                    selling_price = clean_price(ins_tag.text)
-                else:
-                    price_amount = price_wrapper.find(class_="woocommerce-Price-amount")
-                    if price_amount: selling_price = clean_price(price_amount.text)
-                del_tag = price_wrapper.find("del")
-                if del_tag:
-                    mrp_price = clean_price(del_tag.text)
-                else:
-                    mrp_price = selling_price
-            
-            print(f"[{idx}/{len(items)}] CTP: {model_name}")
-            results.append({
-                "Page Title": "CaoThienPhat", "Tên Model": model_name, "Status": "đang kinh doanh", "direct product link": full_link,
-                "MRP price": format_price(mrp_price), "Selling price": format_price(selling_price),
-                "Thông tin chương trình khuyến mãi": "Xem khuyến mãi tại link sản phẩm."
-            })
-        return results
-    except Exception as e:
-        print(f"[!] Lỗi phân tích dữ liệu Cao Thiên Phát: {e}")
-        return []
-
-# ==============================================================================
-# 7. MEDIAMART SCRAPER (Lọc trùng lặp URL)
+# 6. MEDIAMART SCRAPER (Lọc trùng lặp URL)
 # ==============================================================================
 def scrape_mediamart(url="https://mediamart.vn/dieu-hoa-nhiet-do-lg"):
-    print(f"\n--- 7. CÀO MEDIAMART ---")
+    print(f"\n--- 6. CÀO MEDIAMART ---")
     try:
         response = requests.get(url, headers=HEADERS, verify=False, timeout=15)
         if response.status_code != 200:
@@ -653,7 +573,7 @@ def scrape_mediamart(url="https://mediamart.vn/dieu-hoa-nhiet-do-lg"):
         return []
 
 # ==============================================================================
-# 8. HC SCRAPER (Sitemap + Parse trang chi tiết tĩnh)
+# 7. HC SCRAPER (Sitemap + Parse trang chi tiết tĩnh)
 # ==============================================================================
 def fetch_with_proxy(url, proxies_list, min_length=1000):
     """Fetch URL qua proxy xoay vòng Việt Nam (dùng cho Google Colab bị geoblock)."""
@@ -670,7 +590,7 @@ def fetch_with_proxy(url, proxies_list, min_length=1000):
 
 def scrape_hc(url="https://hc.com.vn/ords/cat/dieu-hoa/lg"):
     global FPT_PROXIES
-    print(f"\n--- 8. CÀO HỆ THỐNG HC (Sitemap) ---")
+    print(f"\n--- 7. CÀO HỆ THỐNG HC (Sitemap) ---")
     
     # Xác định keyword lọc sản phẩm từ URL danh mục
     # vd: /dieu-hoa/lg -> "dieu-hoa" + "lg", /loc-khong-khi -> "loc-khong-khi"
@@ -1011,7 +931,6 @@ def run_scraper_job(gc, next_run_str=None):
     run_and_count(scrape_nk, "https://www.nguyenkim.com/may-lanh-lg")
     run_and_count(scrape_cps, "https://cellphones.com.vn/may-lanh/lg.html")
     run_and_count(scrape_fpt, "https://fptshop.com.vn/may-lanh-dieu-hoa/lg")
-    run_and_count(scrape_ctp, "https://caothienphat.com/danhmuc/thiet-bi-gia-dinh/may-lanh-dieu-hoa/?_brand=lg")
     run_and_count(scrape_mediamart, "https://mediamart.vn/dieu-hoa-nhiet-do-lg")
     run_and_count(scrape_hc, "https://hc.com.vn/ords/cat/dieu-hoa/lg")
     
