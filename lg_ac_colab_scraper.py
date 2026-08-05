@@ -8,10 +8,10 @@
 # CẤU HÌNH GOOGLE SHEETS & TELEGRAM
 # ==============================================================================
 # 1. Đường dẫn file Google Sheets của bạn:
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/XXXXXXXXXX/edit"
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1Vuor4KOdwdoym2XwtvkB7_RvWC9XbdLyqMFLwUUuicE/edit?usp=sharing"
 
 # 2. Tên Sheet (tab) ghi dữ liệu:
-SHEET_NAME = "Sheet1"
+SHEET_NAME = "raw_RAC"
 
 # 3. Telegram Bot Token (để gửi thông báo sau mỗi lần quét):
 TELEGRAM_BOT_TOKEN = "8935294463:AAFYtP6V2ASWaB9Dc7u9Ql2l8NIOnCp4jvQ"

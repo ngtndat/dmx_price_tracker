@@ -14,7 +14,7 @@
 # CẤU HÌNH THÔNG TIN CỦA BẠN
 # ==============================================================================
 # 1. Dán đường dẫn file Google Sheet của bạn vào đây (Bắt buộc phải có quyền ghi):
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/XXXXXXXXXX/edit"
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1Vuor4KOdwdoym2XwtvkB7_RvWC9XbdLyqMFLwUUuicE/edit?usp=sharing"
 
 # 2. Tên Sheet (tab) bạn muốn ghi dữ liệu (Ví dụ: "Sheet1" hoặc "Trang_tinh_1"):
 SHEET_NAME = "Sheet1"
