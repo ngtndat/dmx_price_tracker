@@ -796,16 +796,14 @@ def send_telegram_summary(all_data, price_changes, next_run_str=None, error_msg=
                     changes_by_source[src] = []
                 changes_by_source[src].append(item)
             
-            # Liệt kê theo cấu trúc yêu cầu: - Nguồn cào (mã model 1: giá cũ -> giá mới, ...)
+            # Liệt kê theo cấu trúc: - Nguồn cào: \n * Model 1: cũ -> mới \n * Model 2: cũ -> mới
             for src in sorted(changes_by_source.keys()):
+                msg += f"\n- <b>{src}</b>:\n"
                 items_sorted = sorted(changes_by_source[src], key=lambda x: x["model"])
-                detail_list = []
                 for it in items_sorted:
-                    old_val = it["old"] + "K" if it["old"] != "N/A" else "N/A"
-                    new_val = it["new"] + "K" if it["new"] != "N/A" else "N/A"
-                    detail_list.append(f"{it['model']}: {old_val} ➔ <b>{new_val}</b>")
-                
-                msg += f"- <b>{src}</b> ({', '.join(detail_list)})\n"
+                    old_val = it["old"]
+                    new_val = it["new"]
+                    msg += f"  * {it['model']}: {old_val} ➔ <b>{new_val}</b>\n"
         else:
             msg += "<i>Không có biến động giá so với lần quét trước.</i>\n"
             
