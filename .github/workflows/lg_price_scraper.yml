@@ -1,0 +1,112 @@
+name: LG Price Scraper - Tự động quét giá
+
+on:
+  schedule:
+    # Múi giờ GitHub Actions là UTC. VN = UTC+7
+    # 7:00 VN  = 00:00 UTC
+    - cron: '0 0 * * *'
+    # 9:30 VN  = 02:30 UTC
+    - cron: '30 2 * * *'
+    # 12:00 VN = 05:00 UTC
+    - cron: '0 5 * * *'
+    # 16:00 VN = 09:00 UTC
+    - cron: '0 9 * * *'
+    # 20:00 VN = 13:00 UTC
+    - cron: '0 13 * * *'
+  # Cho phép bấm Run thủ công trên GitHub
+  workflow_dispatch:
+
+jobs:
+  # ============================================================
+  # JOB 1: Quét Máy Lọc Không Khí + Máy Hút Ẩm LG
+  # ============================================================
+  scrape-air-purifier:
+    name: "🌬️ Máy Lọc KK & Máy Hút Ẩm LG"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 gspread urllib3 matplotlib
+
+      - name: Run full_colab_scraper.py
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          SPREADSHEET_URL_OVERRIDE: ${{ secrets.SPREADSHEET_URL_AIRPURIFIER }}
+          SHEET_NAME_OVERRIDE: ${{ secrets.SHEET_NAME_AIRPURIFIER }}
+        run: |
+          python - <<'PYEOF'
+          import os, sys, re, subprocess
+
+          env_url   = os.environ.get("SPREADSHEET_URL_OVERRIDE", "")
+          env_sheet = os.environ.get("SHEET_NAME_OVERRIDE", "")
+
+          with open("full_colab_scraper.py", "r", encoding="utf-8") as f:
+              src = f.read()
+
+          if env_url:
+              src = re.sub(r'SPREADSHEET_URL\s*=\s*"[^"]*"', f'SPREADSHEET_URL = "{env_url}"', src, count=1)
+          if env_sheet:
+              src = re.sub(r'SHEET_NAME\s*=\s*"[^"]*"', f'SHEET_NAME = "{env_sheet}"', src, count=1)
+
+          with open("/tmp/run_airpurifier.py", "w", encoding="utf-8") as f:
+              f.write(src)
+
+          result = subprocess.run([sys.executable, "/tmp/run_airpurifier.py"], timeout=3000)
+          sys.exit(result.returncode)
+          PYEOF
+
+  # ============================================================
+  # JOB 2: Quét Máy Lạnh LG
+  # ============================================================
+  scrape-air-conditioner:
+    name: "❄️ Máy Lạnh (Điều Hòa) LG"
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 gspread urllib3 matplotlib
+
+      - name: Run lg_ac_colab_scraper.py
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          SPREADSHEET_URL_OVERRIDE: ${{ secrets.SPREADSHEET_URL_AC }}
+          SHEET_NAME_OVERRIDE: ${{ secrets.SHEET_NAME_AC }}
+        run: |
+          python - <<'PYEOF'
+          import os, sys, re, subprocess
+
+          env_url   = os.environ.get("SPREADSHEET_URL_OVERRIDE", "")
+          env_sheet = os.environ.get("SHEET_NAME_OVERRIDE", "")
+
+          with open("lg_ac_colab_scraper.py", "r", encoding="utf-8") as f:
+              src = f.read()
+
+          if env_url:
+              src = re.sub(r'SPREADSHEET_URL\s*=\s*"[^"]*"', f'SPREADSHEET_URL = "{env_url}"', src, count=1)
+          if env_sheet:
+              src = re.sub(r'SHEET_NAME\s*=\s*"[^"]*"', f'SHEET_NAME = "{env_sheet}"', src, count=1)
+
+          with open("/tmp/run_ac.py", "w", encoding="utf-8") as f:
+              f.write(src)
+
+          result = subprocess.run([sys.executable, "/tmp/run_ac.py"], timeout=3000)
+          sys.exit(result.returncode)
+          PYEOF

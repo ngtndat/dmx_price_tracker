@@ -6,10 +6,16 @@ __pycache__/
 *.log
 .DS_Store
 
+# IDE / Agent configs (local only)
+.cursor/
+.claude/
+.agents/
+.ai-devkit.json
+
 # Ignore credentials and sensitive key JSON files
 *client_secret*.json
 graphic-mission*.json
-google-workspace-mcp/credentials/
+google-workspace-mcp/
 
 # Ignore large media & temporary files from youtube project
 youtube/output/
@@ -19,3 +25,8 @@ youtube/*.mp4
 *.wav
 *.avi
 *.mkv
+
+# Old / scratch folders
+"day 2 - 20260721"/
+"AR application"/
+BTVN/

@@ -5,19 +5,33 @@
 #
 # BƯỚC 1: Copy toàn bộ nội dung mã này dán vào một Cell mới trong Google Colab.
 #
-# BƯỚC 2: Điền đường link (URL) Google Sheets của bạn vào biến SPREADSHEET_URL ở bên dưới.
+# BƯỚC 2: Điền các thông tin cấu hình bên dưới (Google Sheet URL, Telegram).
 #
-# BƯỚC 3: Chạy Cell (Play) và cấp quyền cho Colab đăng nhập tài khoản Google của bạn.
+# BƯỚC 3: Chạy Cell (Play) → Xác thực Google 1 lần → Chọn chạy ngay hoặc theo lịch.
 # ==============================================================================
 
 # ==============================================================================
-# CẤU HÌNH THÔNG TIN GOOGLE SHEET CỦA BẠN
+# CẤU HÌNH THÔNG TIN CỦA BẠN
 # ==============================================================================
 # 1. Dán đường dẫn file Google Sheet của bạn vào đây (Bắt buộc phải có quyền ghi):
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/XXXXXXXXXX/edit"
 
 # 2. Tên Sheet (tab) bạn muốn ghi dữ liệu (Ví dụ: "Sheet1" hoặc "Trang_tinh_1"):
 SHEET_NAME = "Sheet1"
+
+# 3. Telegram Bot Token (để gửi thông báo sau mỗi lần quét):
+TELEGRAM_BOT_TOKEN = "8935294463:AAFYtP6V2ASWaB9Dc7u9Ql2l8NIOnCp4jvQ"
+
+# 4. Telegram Chat ID (ID của bạn hoặc nhóm nhận thông báo):
+TELEGRAM_CHAT_ID = "5226929253"
+
+# 5. Khung giờ tự động quét (giờ Việt Nam GMT+7):
+#    Định dạng: [(giờ, phút), ...]
+SCHEDULE_TIMES = [(7, 0), (9, 30), (12, 0), (16, 0), (20, 0)]
+
+# 6. Chụp ảnh Sheet gửi Telegram (có thể để rỗng "" để bỏ qua):
+#    Ví dụ: "A1:I30" sẽ chụp từ cột A hàng 1 đến cột I hàng 30.
+SCREENSHOT_RANGE = "A1:I30"
 
 # ==============================================================================
 
@@ -29,9 +43,16 @@ import io
 import json
 import re
 import urllib3
+from datetime import datetime, timedelta, timezone
 
 # Suppress insecure request warnings (for verify=False)
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Múi giờ Việt Nam
+TZ_VN = timezone(timedelta(hours=7))
+
+# Cache xác thực Google Sheets (chỉ xác thực 1 lần/runtime)
+_gc_session = None
 
 import gspread
 import os
@@ -709,40 +730,205 @@ def scrape_hc(url="https://hc.com.vn/ords/cat/loc-khong-khi/lg"):
     return results
 
 # ==============================================================================
-# MAIN ENGINE
+# TELEGRAM NOTIFIER
 # ==============================================================================
-def main():
-    # 1. Authenticate with Google
-    print("--- XÁC THỰC GOOGLE SHEETS ---")
+def send_telegram_summary(all_data, source_counts, next_run_str=None, error_msg=None):
+    """Gửi thông báo tóm tắt kết quả quét lên Telegram."""
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("[!] Chưa cấu hình Telegram. Bỏ qua gửi thông báo.")
+        return
+    
+    now_str = datetime.now(TZ_VN).strftime("%d/%m/%Y %H:%M:%S")
+    
+    if error_msg:
+        msg = (
+            f"❌ <b>QUÉT THẤT BẠI - MÁY LỌC KK & MÁY HÚT ẨM LG</b>\n"
+            f"📅 <i>Thời gian: {now_str} (GMT+7)</i>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"⚠️ Lỗi: {error_msg}\n"
+        )
+    else:
+        total = len(all_data)
+        msg = (
+            f"✅ <b>QUÉT HOÀN TẤT - MÁY LỌC KK & MÁY HÚT ẨM LG</b>\n"
+            f"📅 <i>Thời gian: {now_str} (GMT+7)</i>\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+            f"📊 <b>Tổng sản phẩm:</b> {total} sp\n"
+            f"🔢 <b>Chi tiết theo nguồn:</b>\n"
+        )
+        source_icons = {
+            "DMX": "🟢", "DMCL": "🔵", "NguyenKim": "🟡",
+            "CellphoneS": "🟠", "FPT": "🔴", "CaoThienPhat": "🟣",
+            "MediaMart": "⚪", "HC": "🟤"
+        }
+        for src, count in source_counts.items():
+            icon = source_icons.get(src, "▪️")
+            msg += f"  {icon} {src}: <b>{count}</b> sp\n"
+        msg += f"📋 <b>Google Sheet:</b> <a href='{SPREADSHEET_URL}'>Xem tại đây</a>\n"
+    
+    if next_run_str:
+        msg += f"━━━━━━━━━━━━━━━━━━━━━━━━━\n⏰ <b>Lần quét tiếp theo:</b> {next_run_str}\n"
+    
+    msg += "🤖 <i>Antigravity Price Tracker</i>"
+    
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": msg,
+            "parse_mode": "HTML",
+            "disable_web_page_preview": True,
+        }
+        res = requests.post(url, json=payload, timeout=12)
+        if res.status_code == 200:
+            print("[OK] Đã gửi thông báo Telegram thành công!")
+        else:
+            print(f"[!] Telegram API lỗi {res.status_code}: {res.text}")
+    except Exception as e:
+        print(f"[!] Không thể gửi Telegram: {e}")
+
+
+# ==============================================================================
+# SHEET SCREENSHOT → TELEGRAM (Chụp ảnh vùng ô và gửi Telegram)
+# ==============================================================================
+def send_sheet_screenshot_telegram(gc):
+    """Đọc dữ liệu từ SCREENSHOT_RANGE, render thành ảnh bảng PNG, gửi Telegram."""
+    if not SCREENSHOT_RANGE or not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return
+    
+    try:
+        import matplotlib
+        matplotlib.use('Agg')
+        import matplotlib.pyplot as plt
+        import matplotlib.patches as mpatches
+        import io as _io
+        
+        print(f"\n--- CHỤP ẢNH SHEET [{SCREENSHOT_RANGE}] GỬi TELEGRAM ---")
+        
+        # Lấy dữ liệu từ Google Sheets
+        sh = gc.open_by_url(SPREADSHEET_URL)
+        try:
+            sheet = sh.worksheet(SHEET_NAME)
+        except Exception:
+            sheet = sh.get_worksheet(0)
+        
+        raw = sheet.get(SCREENSHOT_RANGE)
+        if not raw:
+            print("[!] Không có dữ liệu trong vùng ô này.")
+            return
+        
+        # Chuẩn hóa số cột
+        max_cols = max(len(r) for r in raw)
+        data = [r + [''] * (max_cols - len(r)) for r in raw]
+        
+        headers = data[0] if data else []
+        rows    = data[1:] if len(data) > 1 else [[''] * max_cols]
+        
+        # Tạo hình
+        fig_w = max(14, max_cols * 2.0)
+        fig_h = max(3, len(rows) * 0.45 + 1.2)
+        fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+        ax.axis('off')
+        ax.set_facecolor('#FAFAFA')
+        fig.patch.set_facecolor('#FAFAFA')
+        
+        tbl = ax.table(
+            cellText=rows,
+            colLabels=headers,
+            loc='center',
+            cellLoc='center'
+        )
+        tbl.auto_set_font_size(False)
+        tbl.set_fontsize(8)
+        tbl.scale(1, 1.7)
+        
+        # Header style (xám đậm)
+        for j in range(max_cols):
+            cell = tbl[0, j]
+            cell.set_facecolor('#1E3A5F')
+            cell.set_text_props(color='white', fontweight='bold', fontsize=8)
+            cell.set_edgecolor('#FFFFFF')
+        
+        # Hàng alternating
+        for i in range(len(rows)):
+            bg = '#E8F0FE' if i % 2 == 0 else '#FFFFFF'
+            for j in range(max_cols):
+                cell = tbl[i + 1, j]
+                cell.set_facecolor(bg)
+                cell.set_edgecolor('#CCCCCC')
+        
+        now_str = datetime.now(TZ_VN).strftime("%d/%m/%Y %H:%M")
+        plt.title(
+            f"📅 Dữ liệu Máy Lọc KK & Máy Hút Ẩm LG — {now_str} (GMT+7)",
+            fontsize=10, fontweight='bold', pad=12, color='#1E3A5F'
+        )
+        
+        # Lưu vào buffer
+        buf = _io.BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight', dpi=150, facecolor='#FAFAFA')
+        buf.seek(0)
+        plt.close(fig)
+        
+        # Gửi lên Telegram
+        tg_caption = (
+            f"📊 <b>Snapshot dữ liệu Sheet</b>\n"
+            f"🔍 Vùng ô: <code>{SCREENSHOT_RANGE}</code>  |  Tab: <code>{SHEET_NAME}</code>\n"
+            f"📅 {now_str} (GMT+7)"
+        )
+        send_url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendPhoto"
+        files   = {'photo': ('sheet_snapshot.png', buf, 'image/png')}
+        payload = {'chat_id': TELEGRAM_CHAT_ID, 'caption': tg_caption, 'parse_mode': 'HTML'}
+        res = requests.post(send_url, files=files, data=payload, timeout=30)
+        
+        if res.status_code == 200:
+            print(f"[OK] Đã gửi ảnh snapshot Sheet ({SCREENSHOT_RANGE}) lên Telegram!")
+        else:
+            print(f"[!] Telegram sendPhoto lỗi {res.status_code}: {res.text[:200]}")
+    
+    except Exception as e:
+        print(f"[!] Không thể chụp/gửi ảnh Sheet: {e}")
+
+
+# ==============================================================================
+# GOOGLE SHEETS AUTH (Cache session - chỉ xác thực 1 lần/runtime)
+# ==============================================================================
+def get_gc():
+    """Trả về gspread client. Xác thực 1 lần, cache cho các lần sau."""
+    global _gc_session
+    if _gc_session is not None:
+        print("[OK] Dùng lại phiên xác thực Google Sheets đã có.")
+        return _gc_session
+    
+    print("--- XÁC THỰC GOOGLE SHEETS (chỉ cần làm 1 lần) ---")
     gc = None
     
-    # 1.1 Thử xác thực qua biến môi trường (GitHub Actions)
+    # Phương thức 1: Biến môi trường (GitHub Actions / Colab Secret)
     env_creds = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON")
     if env_creds:
         try:
             print("Đang xác thực qua biến môi trường GOOGLE_SERVICE_ACCOUNT_JSON...")
             creds_dict = json.loads(env_creds)
             gc = gspread.service_account_from_dict(creds_dict)
-            print("[OK] Xác thực qua GitHub Secret thành công!")
+            print("[OK] Xác thực qua biến môi trường thành công!")
         except Exception as e:
-            print(f"[!] Lỗi xác thực qua biến môi trường: {e}")
-
-    # 1.2 Thử xác thực qua file credentials cục bộ (chạy trên PC local)
+            print(f"[!] Lỗi: {e}")
+    
+    # Phương thức 2: File credentials cục bộ
     if not gc:
         for cred_file in ["credentials.json", "service_account.json", "secret.json"]:
             if os.path.exists(cred_file):
                 try:
-                    print(f"Đang xác thực qua file credentials cục bộ '{cred_file}'...")
+                    print(f"Đang xác thực qua file '{cred_file}'...")
                     gc = gspread.service_account(filename=cred_file)
                     print("[OK] Xác thực qua file credentials thành công!")
                     break
                 except Exception as e:
                     print(f"[!] Lỗi khi đọc file {cred_file}: {e}")
-
-    # 1.3 Thử xác thực qua Google Colab (nếu chạy trên Colab)
+    
+    # Phương thức 3: Google Colab OAuth (popup 1 lần duy nhất)
     if not gc:
         try:
-            print("Đang thử xác thực qua tài khoản Google Colab...")
+            print("Đang xác thực qua tài khoản Google Colab (sẽ hiện popup 1 lần)...")
             from google.colab import auth
             from google.auth import default
             auth.authenticate_user()
@@ -750,73 +936,86 @@ def main():
             gc = gspread.authorize(creds)
             print("[OK] Xác thực qua Google Colab thành công!")
         except Exception as e:
-            print(f"[!] Lỗi xác thực qua Google Colab: {e}")
-
+            print(f"[!] Lỗi xác thực Colab: {e}")
+    
     if not gc:
-        print("[!] Không thể xác thực Google Sheets bằng bất kỳ phương thức nào. Hãy kiểm tra cấu hình.")
-        return
+        print("[!] Không thể xác thực. Kiểm tra lại cấu hình.")
+        return None
+    
+    _gc_session = gc
+    return gc
 
-    # 2. Run Scrapers
+
+# ==============================================================================
+# CORE JOB: Chạy 1 lần quét + ghi sheet + gửi telegram
+# ==============================================================================
+def run_scraper_job(gc, next_run_str=None):
+    """Thực hiện 1 lần quét toàn bộ, ghi vào Google Sheet, gửi Telegram."""
+    print("\n" + "="*70)
+    print(f"🚀 BẮT ĐẦU QUÉT - {datetime.now(TZ_VN).strftime('%d/%m/%Y %H:%M:%S')} (GMT+7)")
+    print("="*70)
+    
     all_data = []
+    source_counts = {}
+    
+    def run_and_count(scrape_fn, *args, label=None):
+        results = scrape_fn(*args)
+        src = results[0]["Page Title"] if results else (label or "Unknown")
+        source_counts[src] = source_counts.get(src, 0) + len(results)
+        all_data.extend(results)
     
     # --- PHẦN 1: MÁY LỌC KHÔNG KHÍ LG ---
     print("\n==================== QUÉT MÁY LỌC KHÔNG KHÍ LG ====================")
-    all_data += scrape_dmx("https://www.dienmayxanh.com/may-loc-khong-khi-lg")
-    all_data += scrape_dmcl("https://dienmaycholon.com/may-loc-khong-khi-lg")
-    all_data += scrape_nk("https://www.nguyenkim.com/may-loc-khong-khi-lg")
-    all_data += scrape_cps("https://cellphones.com.vn/nha-thong-minh/may-loc-khong-khi/lg.html")
-    all_data += scrape_fpt("https://fptshop.com.vn/may-loc-khong-khi/lg")
-    all_data += scrape_ctp("https://caothienphat.com/danhmuc/thiet-bi-gia-dinh/may-loc-khong-khi/?_brand=lg")
-    all_data += scrape_mediamart("https://mediamart.vn/may-loc-khong-khi-lg?a=5585")
-    all_data += scrape_hc("https://hc.com.vn/ords/cat/loc-khong-khi/lg")
+    run_and_count(scrape_dmx, "https://www.dienmayxanh.com/may-loc-khong-khi-lg")
+    run_and_count(scrape_dmcl, "https://dienmaycholon.com/may-loc-khong-khi-lg")
+    run_and_count(scrape_nk, "https://www.nguyenkim.com/may-loc-khong-khi-lg")
+    run_and_count(scrape_cps, "https://cellphones.com.vn/nha-thong-minh/may-loc-khong-khi/lg.html")
+    run_and_count(scrape_fpt, "https://fptshop.com.vn/may-loc-khong-khi/lg")
+    run_and_count(scrape_ctp, "https://caothienphat.com/danhmuc/thiet-bi-gia-dinh/may-loc-khong-khi/?_brand=lg")
+    run_and_count(scrape_mediamart, "https://mediamart.vn/may-loc-khong-khi-lg?a=5585")
+    run_and_count(scrape_hc, "https://hc.com.vn/ords/cat/loc-khong-khi/lg")
     
     # --- PHẦN 2: MÁY HÚT ẨM LG ---
     print("\n==================== QUÉT MÁY HÚT ẨM LG ====================")
-    all_data += scrape_dmx("https://www.dienmayxanh.com/may-hut-am-lg?itm_source=trang-nganh-hang&itm_medium=filter")
-    all_data += scrape_nk("https://www.nguyenkim.com/may-hut-am-lg/")
-    all_data += scrape_cps("https://cellphones.com.vn/do-gia-dung/may-hut-am/lg.html")
-    all_data += scrape_fpt("https://fptshop.com.vn/may-hut-am/lg")
-    all_data += scrape_mediamart("https://mediamart.vn/may-hut-am-lg")
-    all_data += scrape_hc("https://hc.com.vn/ords/cat/may-hut-am/lg")
+    run_and_count(scrape_dmx, "https://www.dienmayxanh.com/may-hut-am-lg?itm_source=trang-nganh-hang&itm_medium=filter")
+    run_and_count(scrape_nk, "https://www.nguyenkim.com/may-hut-am-lg/")
+    run_and_count(scrape_cps, "https://cellphones.com.vn/do-gia-dung/may-hut-am/lg.html")
+    run_and_count(scrape_fpt, "https://fptshop.com.vn/may-hut-am/lg")
+    run_and_count(scrape_mediamart, "https://mediamart.vn/may-hut-am-lg")
+    run_and_count(scrape_hc, "https://hc.com.vn/ords/cat/may-hut-am/lg")
     
     if not all_data:
-        print("[!] Không thu thập được dữ liệu nào. Dừng.")
+        print("[!] Không thu thập được dữ liệu nào.")
+        send_telegram_summary([], {}, next_run_str, error_msg="Không thu thập được dữ liệu nào từ tất cả các trang.")
         return
-        
-    print(f"\n[OK] Hoàn tất cào! Tổng cộng thu được {len(all_data)} sản phẩm từ tất cả các trang web.")
-
-    # 3. Export to target Google Sheet (Append Mode)
-    print("\n--- XUẤT DỮ LIỆU LÊN GOOGLE SHEET CẤU HÌNH ---")
-    print(f"Đang kết nối tới Google Sheet: {SPREADSHEET_URL}...")
+    
+    print(f"\n[OK] Thu được {len(all_data)} sản phẩm từ {len(source_counts)} nguồn.")
+    
+    # Ghi lên Google Sheets
+    print("\n--- XUẤT DỮ LIỆU LÊN GOOGLE SHEET ---")
     try:
         sh = gc.open_by_url(SPREADSHEET_URL)
-        
-        # Open the sheet tab
         try:
             sheet = sh.worksheet(SHEET_NAME)
         except Exception:
             sheet = sh.get_worksheet(0)
-            
-        print(f"Đang chuẩn bị ghi dữ liệu vào tab '{sheet.title}'...")
         
-        # Check if the worksheet is empty (to decide whether to write headers)
+        print(f"Đang ghi vào tab '{sheet.title}'...")
         values = sheet.get_all_values()
         has_header = len(values) > 0
         
-        headers = ["Giờ quét", "Page Title", "Mã Model", "Tên Model", "Status", "direct product link", "MRP price", "Selling price", "Thông tin chương trình khuyến mãi"]
+        headers = ["Giờ quét", "Page Title", "Mã Model", "Tên Model", "Status",
+                   "direct product link", "MRP price", "Selling price",
+                   "Thông tin chương trình khuyến mãi"]
         rows_to_append = []
-        
         if not has_header:
             rows_to_append.append(headers)
-            
-        from datetime import datetime, timedelta, timezone
-        current_time = (datetime.now(timezone.utc) + timedelta(hours=7)).strftime('%Y-%m-%d %H:%M:%S')
         
+        current_time = datetime.now(TZ_VN).strftime('%Y-%m-%d %H:%M:%S')
         for row in all_data:
             model_name = row["Tên Model"]
             prod_link = row["direct product link"]
             model_code = extract_model_code(model_name, prod_link)
-            
             rows_to_append.append([
                 current_time,
                 row["Page Title"],
@@ -828,20 +1027,120 @@ def main():
                 format_price_thousands(row["Selling price"]),
                 row["Thông tin chương trình khuyến mãi"]
             ])
-            
-        # Append rows to the end of the sheet
-        sheet.append_rows(rows_to_append, value_input_option='USER_ENTERED')
         
-        print("\n" + "="*80)
-        print("[THÀNH CÔNG] DỮ LIỆU ĐÃ ĐƯỢC CẬP NHẬT LÊN FILE GOOGLE SHEET CỦA BẠN (DẠNG THÊM MỚI Ở DƯỚI)!")
-        print(f"👉 Link File: {SPREADSHEET_URL}")
-        print("="*80)
+        sheet.append_rows(rows_to_append, value_input_option='USER_ENTERED')
+        print("\n" + "="*70)
+        print("[THÀNH CÔNG] Dữ liệu đã được ghi vào Google Sheet!")
+        print(f"👉 {SPREADSHEET_URL}")
+        print("="*70)
+        
+        # Gửi thông báo tóm tắt
+        send_telegram_summary(all_data, source_counts, next_run_str)
+        # Gửi ảnh chụp Sheet
+        send_sheet_screenshot_telegram(gc)
         
     except Exception as e:
-        print(f"[!] Lỗi khi xuất lên Google Sheets: {e}")
-        print("Vui lòng đảm bảo:")
-        print("1. Đường dẫn SPREADSHEET_URL chính xác.")
-        print("2. Tài khoản Google của bạn có quyền chỉnh sửa (Editor) đối với tệp tin này.")
+        err = f"Lỗi ghi Google Sheets: {e}"
+        print(f"[!] {err}")
+        send_telegram_summary(all_data, source_counts, next_run_str, error_msg=err)
+
+
+# ==============================================================================
+# SCHEDULER: Chạy tự động theo khung giờ
+# ==============================================================================
+def get_next_run_time(schedule_times):
+    """Tìm thời điểm quét tiếp theo từ danh sách khung giờ (giờ VN)."""
+    now = datetime.now(TZ_VN)
+    today = now.date()
+    candidates = []
+    for (h, m) in schedule_times:
+        t = datetime(today.year, today.month, today.day, h, m, tzinfo=TZ_VN)
+        if t > now:
+            candidates.append(t)
+    if not candidates:
+        # Tất cả giờ hôm nay đã qua → lấy giờ đầu tiên ngày mai
+        tomorrow = today + timedelta(days=1)
+        h, m = schedule_times[0]
+        candidates.append(datetime(tomorrow.year, tomorrow.month, tomorrow.day, h, m, tzinfo=TZ_VN))
+    return min(candidates)
+
+
+def start_scheduler(gc):
+    """Vòng lặp chạy tự động theo SCHEDULE_TIMES. Nhấn Ctrl+C để dừng."""
+    # Sắp xếp giờ tăng dần
+    schedule_times = sorted(SCHEDULE_TIMES)
+    
+    print("\n" + "="*70)
+    print("⏰ CHẾ ĐỘ TỰ ĐỘNG - Lịch quét hàng ngày (Giờ Việt Nam GMT+7):")
+    for (h, m) in schedule_times:
+        print(f"   • {h:02d}:{m:02d}")
+    print("   Nhấn Ctrl+C để dừng.")
+    print("="*70)
+    
+    try:
+        while True:
+            now = datetime.now(TZ_VN)
+            next_run = get_next_run_time(schedule_times)
+            wait_secs = (next_run - now).total_seconds()
+            next_run_str = next_run.strftime("%d/%m/%Y %H:%M")
+            
+            print(f"\n⏳ Lần quét tiếp theo: {next_run_str} (còn {int(wait_secs//3600)}h {int((wait_secs%3600)//60)}p)")
+            
+            # Chờ đến giờ (kiểm tra mỗi 30 giây)
+            while True:
+                now = datetime.now(TZ_VN)
+                remaining = (next_run - now).total_seconds()
+                if remaining <= 0:
+                    break
+                sleep_chunk = min(30, remaining)
+                time.sleep(sleep_chunk)
+            
+            print(f"\n🔔 ĐÃ ĐẾN GIỜ QUÉT: {datetime.now(TZ_VN).strftime('%H:%M')}")
+            
+            # Tính lần quét tiếp theo (sau lần này)
+            time.sleep(2)  # buffer nhỏ để tránh tính trùng cùng phút
+            next_next = get_next_run_time(schedule_times)
+            next_next_str = next_next.strftime("%d/%m/%Y %H:%M")
+            
+            run_scraper_job(gc, next_run_str=next_next_str)
+            
+    except KeyboardInterrupt:
+        print("\n[Dừng] Bạn đã dừng lịch tự động.")
+
+
+# ==============================================================================
+# MAIN ENGINE
+# ==============================================================================
+def main():
+    if SPREADSHEET_URL == "https://docs.google.com/spreadsheets/d/XXXXXXXXXX/edit":
+        print("[!] Hãy điền SPREADSHEET_URL của bạn vào cấu hình ở đầu file.")
+        return
+    
+    # Xác thực Google Sheets 1 lần duy nhất (cache session)
+    gc = get_gc()
+    if not gc:
+        return
+    
+    # Hỏi người dùng muốn chạy ngay hay chờ theo lịch
+    print("\n" + "="*70)
+    print("Bạn muốn:")
+    print("  [1] Chạy quét NGAY BÂY GIỜ")
+    print("  [2] Chờ và chạy tự động theo LỊCH (7:00 / 9:30 / 12:00 / 16:00 / 20:00)")
+    print("="*70)
+    
+    try:
+        choice = input("Nhập lựa chọn (1 hoặc 2, mặc định = 1): ").strip()
+    except Exception:
+        choice = "1"  # Nếu không nhập được (ví dụ chạy non-interactive), chạy ngay
+    
+    if choice == "2":
+        start_scheduler(gc)
+    else:
+        # Tính giờ quét tiếp theo để đưa vào Telegram
+        next_run = get_next_run_time(sorted(SCHEDULE_TIMES))
+        next_run_str = next_run.strftime("%d/%m/%Y %H:%M")
+        run_scraper_job(gc, next_run_str=next_run_str)
+
 
 if __name__ == "__main__":
     main()
