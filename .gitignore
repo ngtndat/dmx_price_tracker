@@ -27,6 +27,23 @@ youtube/*.mp4
 *.mkv
 
 # Old / scratch folders
-"day 2 - 20260721"/
-"AR application"/
+day 2 - 20260721/
+AR application/
 BTVN/
+price_tracker_app/
+youtube/
+youtube_dubber_backend/
+youtube_dubber_frontend/
+google-workspace-mcp/
+
+# Unused files in root
+dmx_scraper.py
+interactive_app.py
+main.py
+price_history.py
+test_automation.py
+tax_regulations_2026.md
+telegram_bot.py
+gsheet_manager.py
+docker-compose.yml
+docs/
