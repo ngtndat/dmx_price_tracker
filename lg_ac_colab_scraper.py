@@ -986,6 +986,67 @@ def run_scraper_job(gc, next_run_str=None):
 
 
 # ==============================================================================
+# TELEGRAM COMMAND LISTENER (nhận lệnh "Quét" qua chat)
+# ==============================================================================
+def listen_telegram_commands(gc, manual_trigger_event):
+    """Long-polling Telegram để lắng nghe lệnh 'Quét' từ người dùng.
+    Khi nhận được, set manual_trigger_event để báo scheduler chạy ngay.
+    """
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return
+    
+    offset = None
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
+    allowed_chat_id = str(TELEGRAM_CHAT_ID)
+    
+    print("[Telegram] Đang lắng nghe lệnh 'Quét'...")
+    
+    while True:
+        try:
+            params = {"timeout": 20, "allowed_updates": ["message"]}
+            if offset is not None:
+                params["offset"] = offset
+            
+            resp = requests.get(url, params=params, timeout=30)
+            if resp.status_code != 200:
+                time.sleep(5)
+                continue
+            
+            data = resp.json()
+            for update in data.get("result", []):
+                offset = update["update_id"] + 1  # Đánh dấu đã đọc
+                
+                msg = update.get("message", {})
+                chat_id = str(msg.get("chat", {}).get("id", ""))
+                text = msg.get("text", "").strip()
+                
+                # Chỉ chấp nhận lệnh từ đúng chat ID đã cấu hình
+                if chat_id != allowed_chat_id:
+                    continue
+                
+                if text.lower() in ["quét", "quet", "scan", "/quét", "/quet", "/scan"]:
+                    print(f"[Telegram] Nhận lệnh '{text}' → Kích hoạt quét ngay!")
+                    # Gửi xác nhận về Telegram
+                    try:
+                        requests.post(
+                            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+                            json={
+                                "chat_id": TELEGRAM_CHAT_ID,
+                                "text": "⚡ <b>Đã nhận lệnh!</b> Đang khởi động quét ngay lập tức...",
+                                "parse_mode": "HTML"
+                            },
+                            timeout=10
+                        )
+                    except Exception:
+                        pass
+                    manual_trigger_event.set()  # Báo hiệu cho scheduler chạy ngay
+        
+        except Exception as e:
+            print(f"[Telegram Listener] Lỗi: {e}")
+            time.sleep(10)
+
+
+# ==============================================================================
 # SCHEDULER: Chạy tự động theo khung giờ
 # ==============================================================================
 def get_next_run_time(schedule_times):
@@ -1005,13 +1066,28 @@ def get_next_run_time(schedule_times):
 
 
 def start_scheduler(gc):
-    """Vòng lặp chạy tự động theo SCHEDULE_TIMES. Nhấn Ctrl+C để dừng."""
+    """Vòng lặp chạy tự động theo SCHEDULE_TIMES. Nhấn Ctrl+C để dừng.
+    Đồng thời lắng nghe lệnh 'Quét' từ Telegram để chạy ngay khi cần.
+    """
+    import threading
     schedule_times = sorted(SCHEDULE_TIMES)
+    
+    # Event để Telegram listener báo hiệu trigger thủ công
+    manual_trigger = threading.Event()
+    
+    # Khởi động Telegram listener trên thread daemon riêng
+    listener_thread = threading.Thread(
+        target=listen_telegram_commands,
+        args=(gc, manual_trigger),
+        daemon=True
+    )
+    listener_thread.start()
     
     print("\n" + "="*70)
     print("⏰ CHẾ ĐỘ TỰ ĐỘNG - Lịch quét hàng ngày (Giờ Việt Nam GMT+7):")
     for (h, m) in schedule_times:
         print(f"   • {h:02d}:{m:02d}")
+    print("💬 Nhắn 'Quét' vào Telegram Bot để quét ngay lập tức.")
     print("   Nhấn Ctrl+C để dừng.")
     print("="*70)
     
@@ -1024,16 +1100,19 @@ def start_scheduler(gc):
             
             print(f"\n⏳ Lần quét tiếp theo: {next_run_str} (còn {int(wait_secs//3600)}h {int((wait_secs%3600)//60)}p)")
             
-            # Chờ đến giờ (kiểm tra mỗi 30 giây)
+            # Chờ đến giờ — kiểm tra mỗi 5 giây để phát hiện lệnh Telegram nhanh hơn
+            manual_trigger.clear()
             while True:
                 now = datetime.now(TZ_VN)
                 remaining = (next_run - now).total_seconds()
                 if remaining <= 0:
+                    print(f"\n🔔 ĐÃ ĐẾN GIỜ QUÉT: {datetime.now(TZ_VN).strftime('%H:%M')}")
                     break
-                sleep_chunk = min(30, remaining)
-                time.sleep(sleep_chunk)
-            
-            print(f"\n🔔 ĐÃ ĐẾN GIỜ QUÉT: {datetime.now(TZ_VN).strftime('%H:%M')}")
+                # Chờ tối đa 5 giây mỗi lần, hoặc đến khi có trigger thủ công
+                triggered = manual_trigger.wait(timeout=min(5, remaining))
+                if triggered:
+                    print(f"\n⚡ QUÉT THỦ CÔNG QUA TELEGRAM: {datetime.now(TZ_VN).strftime('%H:%M:%S')}")
+                    break
             
             time.sleep(2)
             next_next = get_next_run_time(schedule_times)
