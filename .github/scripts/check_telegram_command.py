@@ -4,6 +4,7 @@ check_telegram_command.py
 Chạy trong GitHub Actions mỗi 5 phút.
 - Gọi Telegram getUpdates để tìm tin nhắn "Quét" mới trong vòng 6 phút gần nhất.
 - Nếu tìm thấy → gửi xác nhận về Telegram + trigger workflow_dispatch scraper.
+- Sau đó confirm offset (đánh dấu đã đọc) để không re-trigger lần sau.
 - Nếu không → thoát im lặng.
 """
 
@@ -23,6 +24,8 @@ TRIGGER_KEYWORDS = {"quét", "quet", "scan", "/quét", "/quet", "/scan"}
 # Chỉ xét tin nhắn trong vòng 6 phút gần nhất (360s) để tránh re-trigger tin cũ
 MAX_AGE_SECONDS = 360
 
+BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}"
+
 
 def send_telegram(text: str):
     """Gửi tin nhắn xác nhận về Telegram."""
@@ -30,12 +33,26 @@ def send_telegram(text: str):
         return
     try:
         requests.post(
-            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+            f"{BASE_URL}/sendMessage",
             json={"chat_id": TELEGRAM_CHAT_ID, "text": text, "parse_mode": "HTML"},
             timeout=10,
         )
     except Exception as e:
         print(f"[!] Không gửi được Telegram: {e}")
+
+
+def confirm_offset(offset: int):
+    """Gọi getUpdates với offset để confirm (đánh dấu đã đọc) cho Telegram.
+    Telegram sẽ xóa tất cả update có update_id < offset."""
+    try:
+        requests.get(
+            f"{BASE_URL}/getUpdates",
+            params={"offset": offset, "limit": 1, "timeout": 1},
+            timeout=5,
+        )
+        print(f"[OK] Đã confirm offset={offset} — Telegram sẽ không trả lại tin cũ.")
+    except Exception as e:
+        print(f"[!] Lỗi confirm offset: {e}")
 
 
 def trigger_workflow():
@@ -62,7 +79,9 @@ def trigger_workflow():
 
 
 def check_for_command():
-    """Kiểm tra Telegram có lệnh 'Quét' mới không."""
+    """Kiểm tra Telegram có lệnh 'Quét' mới không.
+    Trả về (found: bool, max_update_id: int hoặc None)
+    """
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("[!] Thiếu TELEGRAM_BOT_TOKEN hoặc TELEGRAM_CHAT_ID.")
         sys.exit(0)
@@ -71,23 +90,28 @@ def check_for_command():
     now_ts = int(time.time())
     cutoff_ts = now_ts - MAX_AGE_SECONDS
 
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
-    params = {
-        "allowed_updates": ["message"],
-        "offset": -100,   # Lấy 100 update gần nhất (đủ để bắt được tin 5p trước)
-        "limit": 100,
-    }
+    # Lấy tất cả updates chưa được confirm
+    url = f"{BASE_URL}/getUpdates"
+    params = {"timeout": 5, "limit": 100}
 
     try:
-        resp = requests.get(url, params=params, timeout=20)
+        resp = requests.get(url, params=params, timeout=15)
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
         print(f"[!] Lỗi gọi Telegram API: {e}")
         sys.exit(0)
 
+    results = data.get("result", [])
+    if not results:
+        print("[OK] Không có update mới nào từ Telegram.")
+        return False, None
+
+    # Tìm update_id lớn nhất để confirm tất cả
+    max_update_id = max(u["update_id"] for u in results)
     found = False
-    for update in data.get("result", []):
+
+    for update in results:
         msg = update.get("message", {})
         if not msg:
             continue
@@ -96,21 +120,28 @@ def check_for_command():
         msg_ts  = msg.get("date", 0)
         text    = msg.get("text", "").strip().lower()
 
-        # Chỉ xét tin từ đúng chat và trong vòng 6 phút
+        # Chỉ xét tin từ đúng chat và trong vòng 6 phút gần nhất
         if chat_id != allowed_chat_id:
             continue
         if msg_ts < cutoff_ts:
+            print(f"[Skip] Tin '{text}' quá cũ (ts={msg_ts}, cutoff={cutoff_ts}). Bỏ qua.")
             continue
         if text in TRIGGER_KEYWORDS:
-            print(f"[Telegram] Phát hiện lệnh '{text}' (ts={msg_ts}). Đang kích hoạt quét...")
+            print(f"[Telegram] Phát hiện lệnh '{text}' (ts={msg_ts}, age={now_ts - msg_ts}s). Đang kích hoạt quét...")
             found = True
             break
 
-    return found
+    return found, max_update_id
 
 
 def main():
-    if check_for_command():
+    found, max_update_id = check_for_command()
+
+    # Luôn confirm offset để xóa tin cũ — dù có tìm thấy lệnh Quét hay không
+    if max_update_id is not None:
+        confirm_offset(max_update_id + 1)
+
+    if found:
         # 1. Gửi xác nhận ngay lập tức
         send_telegram(
             "⚡ <b>Đã nhận lệnh Quét!</b>\n"
