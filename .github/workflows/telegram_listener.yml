@@ -1,0 +1,38 @@
+name: "📩 Telegram Bot Listener - Nhận lệnh Quét"
+
+on:
+  schedule:
+    # Chạy mỗi 5 phút (UTC) để kiểm tra Telegram
+    - cron: '*/5 * * * *'
+  workflow_dispatch:  # Cho phép trigger thủ công để test
+
+jobs:
+  listen-telegram:
+    name: "Check Telegram for 'Quét' command"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    # Cấp quyền để trigger workflow_dispatch trong cùng repo
+    permissions:
+      actions: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Check Telegram and trigger scraper if commanded
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python .github/scripts/check_telegram_command.py
