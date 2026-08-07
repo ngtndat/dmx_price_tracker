@@ -122,11 +122,70 @@ def clean_text(text):
     return " ".join(text.split())
 
 # ==============================================================================
+# SMART REQUEST SYSTEM (PROXY FALLBACK FOR BYPASSING GEOBLOCK/CLOUD BLOCK)
+# ==============================================================================
+_VN_PROXIES = []
+
+def get_vn_proxies():
+    """Tải danh sách proxy Việt Nam từ API công cộng (cache)."""
+    global _VN_PROXIES
+    if _VN_PROXIES:
+        return _VN_PROXIES
+    print("[Proxy] Đang tải danh sách proxy Việt Nam từ API...")
+    try:
+        proxy_api_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=6000&country=VN&ssl=all&anonymity=all"
+        resp = requests.get(proxy_api_url, timeout=10)
+        _VN_PROXIES = [p.strip() for p in resp.text.strip().split("\n") if p.strip()]
+        print(f"[Proxy] -> Đã lấy được {len(_VN_PROXIES)} proxy Việt Nam.")
+    except Exception as e:
+        print(f"[Proxy] [!] Không thể lấy danh sách proxy: {e}")
+        _VN_PROXIES = []
+    return _VN_PROXIES
+
+def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=10):
+    """Gửi GET request: thử kết nối trực tiếp trước,
+    nếu bị timeout/lỗi kết nối thì xoay vòng qua danh sách proxy Việt Nam.
+    """
+    # 1. Thử kết nối trực tiếp
+    try:
+        r = requests.get(url, headers=headers, verify=verify, timeout=timeout)
+        if r.status_code == 200:
+            return r
+        print(f"  [smart_get] Trực tiếp trả về HTTP {r.status_code} cho {url[:60]}. Thử qua proxy...")
+    except Exception as e:
+        print(f"  [smart_get] Lỗi kết nối trực tiếp đến {url[:60]}: {e}. Thử qua proxy...")
+
+    # 2. Dự phòng: Thử qua proxy Việt Nam
+    proxies_list = get_vn_proxies()
+    if not proxies_list:
+        print("  [smart_get] [!] Không có proxy dự phòng nào.")
+        return None
+
+    # Thử qua từng proxy trong danh sách
+    for idx, proxy in enumerate(proxies_list[:max_proxies], 1):
+        proxies = {
+            "http": f"http://{proxy}",
+            "https": f"http://{proxy}"
+        }
+        try:
+            r = requests.get(url, headers=headers, proxies=proxies, verify=verify, timeout=8)
+            if r.status_code == 200:
+                print(f"  [smart_get] [Thành công] Kết nối qua proxy {proxy}!")
+                return r
+        except Exception:
+            pass
+            
+    print(f"  [smart_get] [!] Tất cả kết nối trực tiếp & proxy đều thất bại cho: {url}")
+    return None
+
+# ==============================================================================
 # 1. DIEN MAY XANH SCRAPER (DMX)
 # ==============================================================================
 def parse_dmx_detail(url, category_selling_price="0", category_mrp_price="0"):
     try:
-        response = requests.get(url, headers=HEADERS, verify=False, timeout=15)
+        response = smart_get(url, headers=HEADERS, verify=False, timeout=15)
+        if not response:
+            return {"Status": "Error", "MRP": format_price(category_mrp_price), "Selling": format_price(category_selling_price), "Promotions": "Lỗi kết nối (timeout/proxy thất bại)"}
         if response.status_code == 404:
             return {"Status": "sản phẩm bỏ mẫu", "MRP": "N/A", "Selling": "N/A", "Promotions": "N/A"}
         elif response.status_code != 200:
@@ -210,7 +269,10 @@ def parse_dmx_detail(url, category_selling_price="0", category_mrp_price="0"):
 def scrape_dmx(url="https://www.dienmayxanh.com/may-loc-khong-khi-lg"):
     print(f"\n--- 1. CÀO DIỆN MÁY XANH (DMX) ---")
     try:
-        response = requests.get(url, headers=HEADERS, verify=False, timeout=15)
+        response = smart_get(url, headers=HEADERS, verify=False, timeout=15)
+        if not response:
+            print("[!] Không thể kết nối DMX (cả trực tiếp và proxy đều thất bại)")
+            return []
         if response.status_code != 200:
             print(f"[!] Lỗi kết nối DMX: {response.status_code}")
             return []
@@ -395,7 +457,10 @@ def scrape_nk(url=None):
             
         print(f"[{idx}/{len(urls_to_scrape)}] Đang cào NK: {target_url}")
         try:
-            response = requests.get(target_url, headers=HEADERS, verify=False, timeout=15)
+            response = smart_get(target_url, headers=HEADERS, verify=False, timeout=15)
+            if not response:
+                print("    [!] Lỗi kết nối đến trang Nguyễn Kim (timeout/proxy thất bại)")
+                continue
             if response.status_code != 200:
                 print(f"    [!] Lỗi tải trang (HTTP {response.status_code})")
                 continue
