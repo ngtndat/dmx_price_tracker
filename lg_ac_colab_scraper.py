@@ -196,6 +196,10 @@ def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=25):
             _LAST_WORKING_PROXY = None
 
     # 3. Dự phòng: Thử qua danh sách proxy Việt Nam
+    if len(_VN_PROXIES) < 5:
+        print("  [smart_get] Số lượng proxy còn lại dưới 5. Đang reset để tải mới danh sách proxy...")
+        _VN_PROXIES = []
+        
     proxies_list = get_vn_proxies()
     if not proxies_list:
         print("  [smart_get] [!] Không có proxy dự phòng nào.")
