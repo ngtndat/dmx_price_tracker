@@ -1055,7 +1055,7 @@ def run_scraper_job(gc, next_run_str=None):
             model_code = extract_model_code(model_name, prod_link)
             
             rows_to_append.append([
-                current_time,
+                "", # Để trống ngày giờ quét theo yêu cầu
                 row["Page Title"],
                 model_code,
                 model_name,
