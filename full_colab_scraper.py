@@ -1267,7 +1267,7 @@ def run_scraper_job(gc, next_run_str=None):
                 })
                 
             rows_to_append.append([
-                "", # Để trống ngày giờ quét theo yêu cầu
+                current_time if os.environ.get("GITHUB_ACTIONS") else "", # Chỉ ghi ngày giờ khi chạy trên GitHub Actions
                 row["Page Title"],
                 model_code,
                 model_name,
