@@ -932,6 +932,13 @@ def run_scraper_job(gc, next_run_str=None):
     
     print(f"\n[OK] Thu được {len(all_data)} sản phẩm từ {len(source_counts)} nguồn.")
     
+    if gc == "MOCK_GC":
+        print("\n⚠️ CHẾ ĐỘ TEST: Bỏ qua bước ghi Google Sheets.")
+        print(f"[OK] Thu thập hoàn tất. Tổng số: {len(all_data)} sản phẩm.")
+        # Vẫn gửi Telegram tóm tắt để kiểm tra
+        send_telegram_summary(all_data, next_run_str)
+        return
+        
     # Ghi lên Google Sheets
     print("\n--- XUẤT DỮ LIỆU LÊN GOOGLE SHEET ---")
     try:
@@ -1135,7 +1142,20 @@ def main():
     # Xác thực Google Sheets 1 lần duy nhất (cache session)
     gc = get_gc()
     if not gc:
-        return
+        print("\n[!] Không thể xác thực Google Sheets.")
+        print("Bạn có muốn chạy ở CHẾ ĐỘ TEST (Chỉ in kết quả, không ghi Google Sheet)?")
+        print("  [1] Có (Chạy chế độ Test)")
+        print("  [2] Không (Thoát)")
+        try:
+            test_choice = input("Nhập lựa chọn (1 hoặc 2, mặc định = 1): ").strip()
+        except Exception:
+            test_choice = "1"
+        
+        if test_choice == "2":
+            return
+        else:
+            print("\n⚠️ Đang chạy ở CHẾ ĐỘ TEST (Bỏ qua ghi Google Sheet).")
+            gc = "MOCK_GC"
 
     # Kiểm tra xem có đang chạy tự động trên GitHub Actions hay không
     is_github_actions = os.environ.get("GITHUB_ACTIONS") == "true"
