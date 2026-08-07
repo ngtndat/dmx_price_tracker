@@ -1005,6 +1005,15 @@ def run_scraper_job(gc, next_run_str=None):
     
     def run_and_count(scrape_fn, *args, label=None):
         results = scrape_fn(*args)
+        # Lọc nghiêm ngặt chỉ giữ lại sản phẩm có chữ LG trong tên để tránh dính quảng cáo hãng khác
+        filtered = []
+        for item in results:
+            if "lg" in item.get("Tên Model", "").lower():
+                filtered.append(item)
+            else:
+                print(f"    [!] Đã loại bỏ sản phẩm khác hãng: {item.get('Tên Model')} từ {item.get('Page Title')}")
+        results = filtered
+        
         src = results[0]["Page Title"] if results else (label or "Unknown")
         source_counts[src] = source_counts.get(src, 0) + len(results)
         all_data.extend(results)
@@ -1012,7 +1021,7 @@ def run_scraper_job(gc, next_run_str=None):
     print("\n==================== BẮT ĐẦU QUÉT MÁY LẠNH LG ====================")
     run_and_count(scrape_dmx, "https://www.dienmayxanh.com/may-lanh-lg")
     run_and_count(scrape_dmcl, "https://dienmaycholon.com/may-lanh-lg")
-    run_and_count(scrape_nk, "https://www.nguyenkim.com/may-lanh-lg")
+    run_and_count(scrape_nk, "https://www.nguyenkim.com/dieu-hoa.c?property=thuong-hieu-brand:LG")
     run_and_count(scrape_cps, "https://cellphones.com.vn/may-lanh/lg.html")
     run_and_count(scrape_fpt, "https://fptshop.com.vn/may-lanh-dieu-hoa/lg")
     run_and_count(scrape_mediamart, "https://mediamart.vn/dieu-hoa-nhiet-do-lg")
