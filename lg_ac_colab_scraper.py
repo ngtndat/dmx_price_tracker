@@ -125,40 +125,54 @@ def clean_text(text):
 _VN_PROXIES = []
 
 def get_vn_proxies():
-    """Tải danh sách proxy HTTP Việt Nam từ API công cộng (cache)."""
+    """Tải danh sách proxy HTTP Việt Nam từ nhiều nguồn (ProxyScrape & Geonode) để tăng độ ổn định."""
     global _VN_PROXIES
     if _VN_PROXIES:
         return _VN_PROXIES
-    print("[Proxy] Đang tải danh sách proxy Việt Nam từ API...")
+    print("[Proxy] Đang tải danh sách proxy Việt Nam từ nhiều API...")
+    loaded_set = set()
+    loaded_proxies = []
+    
+    # Nguồn 1: ProxyScrape
     try:
-        # Sử dụng API ProxyScrape chỉ lấy giao thức HTTP để đảm bảo an toàn, không bị treo socket
-        proxy_api_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=6000&country=VN&ssl=all&anonymity=all"
-        resp = requests.get(proxy_api_url, timeout=10)
-        raw_list = [p.strip() for p in resp.text.strip().split("\n") if p.strip()]
-        
-        # Tạo cấu trúc proxy dict chuẩn cho requests
-        loaded_proxies = []
-        for ip_port in raw_list:
-            px = {
-                "http": f"http://{ip_port}",
-                "https": f"http://{ip_port}"
-            }
-            loaded_proxies.append((ip_port, px))
-            
-        _VN_PROXIES = loaded_proxies
-        print(f"[Proxy] -> Đã lấy được {len(_VN_PROXIES)} proxy HTTP Việt Nam.")
+        url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=VN&ssl=all&anonymity=all"
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            raw_list = [p.strip() for p in resp.text.strip().split("\n") if p.strip()]
+            for ip_port in raw_list:
+                if ip_port not in loaded_set:
+                    loaded_set.add(ip_port)
+                    px = {"http": f"http://{ip_port}", "https": f"http://{ip_port}"}
+                    loaded_proxies.append((ip_port, px))
     except Exception as e:
-        print(f"[Proxy] [!] Không thể lấy danh sách proxy: {e}")
-        _VN_PROXIES = []
+        print(f"[Proxy] [!] Lỗi tải từ ProxyScrape: {e}")
+
+    # Nguồn 2: Geonode
+    try:
+        url = "https://proxylist.geonode.com/api/proxy-list?country=VN&protocols=http%2Chttps&limit=100&page=1&sort_by=lastChecked&sort_type=desc"
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            for item in data.get("data", []):
+                ip_port = f"{item['ip']}:{item['port']}"
+                if ip_port not in loaded_set:
+                    loaded_set.add(ip_port)
+                    px = {"http": f"http://{ip_port}", "https": f"http://{ip_port}"}
+                    loaded_proxies.append((ip_port, px))
+    except Exception as e:
+        print(f"[Proxy] [!] Lỗi tải từ Geonode: {e}")
+            
+    _VN_PROXIES = loaded_proxies
+    print(f"[Proxy] -> Tổng cộng đã thu thập được {len(_VN_PROXIES)} proxy HTTP Việt Nam.")
     return _VN_PROXIES
 
 _LAST_WORKING_PROXY = None
 
-def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=20):
+def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=25):
     """Gửi GET request: thử kết nối trực tiếp trước,
-    nếu bị lỗi thì xoay vòng qua danh sách proxy (HTTP, SOCKS4, SOCKS5) Việt Nam.
+    nếu bị lỗi thì xoay vòng qua danh sách proxy (HTTP) Việt Nam.
     """
-    global _LAST_WORKING_PROXY
+    global _LAST_WORKING_PROXY, _VN_PROXIES
     
     # 1. Thử kết nối trực tiếp
     try:
@@ -169,14 +183,17 @@ def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=20):
     except Exception as e:
         print(f"  [smart_get] Lỗi kết nối trực tiếp đến {url[:60]}: {e}. Thử qua proxy...")
 
-    # 2. Thử lại proxy hoạt động gần nhất (nếu có) để tránh lặp lại vòng lặp timeout proxy chết
+    # 2. Thử lại proxy hoạt động gần nhất (nếu có)
     if _LAST_WORKING_PROXY:
         try:
             r = requests.get(url, headers=headers, proxies=_LAST_WORKING_PROXY[1], verify=verify, timeout=8)
             if r.status_code == 200:
                 return r
         except Exception:
-            _LAST_WORKING_PROXY = None # Reset cache proxy nếu đã chết
+            # Loại bỏ proxy này khỏi danh sách toàn cục vì nó đã chết
+            print(f"  [smart_get] Proxy đã cache {_LAST_WORKING_PROXY[0]} bị chết. Loại bỏ khỏi danh sách...")
+            _VN_PROXIES = [p for p in _VN_PROXIES if p[0] != _LAST_WORKING_PROXY[0]]
+            _LAST_WORKING_PROXY = None
 
     # 3. Dự phòng: Thử qua danh sách proxy Việt Nam
     proxies_list = get_vn_proxies()
@@ -185,16 +202,30 @@ def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=20):
         return None
 
     # Thử qua từng proxy trong danh sách
+    dead_proxies_to_remove = []
+    successful_proxy = None
+    response = None
+
     for idx, (ip_port, proxies_dict) in enumerate(proxies_list[:max_proxies], 1):
         try:
             r = requests.get(url, headers=headers, proxies=proxies_dict, verify=verify, timeout=8)
             if r.status_code == 200:
                 proto_name = list(proxies_dict.values())[0].split("://")[0].upper()
                 print(f"  [smart_get] [Thành công] Kết nối qua proxy {ip_port} ({proto_name})!")
-                _LAST_WORKING_PROXY = (ip_port, proxies_dict) # Cập nhật cache hoạt động
-                return r
+                successful_proxy = (ip_port, proxies_dict)
+                response = r
+                break
         except Exception:
-            pass
+            dead_proxies_to_remove.append(ip_port)
+
+    # Loại bỏ các proxy chết khỏi danh sách toàn cục để không thử lại ở trang sau
+    if dead_proxies_to_remove:
+        _VN_PROXIES = [p for p in _VN_PROXIES if p[0] not in dead_proxies_to_remove]
+        print(f"  [smart_get] Đã loại bỏ {len(dead_proxies_to_remove)} proxy chết. Còn lại {len(_VN_PROXIES)} proxy.")
+
+    if successful_proxy:
+        _LAST_WORKING_PROXY = successful_proxy
+        return response
             
     print(f"  [smart_get] [!] Tất cả kết nối trực tiếp & proxy đều thất bại cho: {url}")
     return None
