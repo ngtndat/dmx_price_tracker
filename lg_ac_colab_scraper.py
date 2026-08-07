@@ -181,7 +181,7 @@ def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=10):
 # ==============================================================================
 def parse_dmx_detail(url, category_selling_price="0", category_mrp_price="0"):
     try:
-        response = smart_get(url, headers=HEADERS, verify=False, timeout=15)
+        response = smart_get(url, headers={**HEADERS, "Referer": "https://www.dienmayxanh.com"}, verify=False, timeout=15)
         if not response:
             return {"Status": "Error", "MRP": format_price(category_mrp_price), "Selling": format_price(category_selling_price), "Promotions": "Lỗi kết nối (timeout/proxy thất bại)"}
         if response.status_code == 404:
@@ -267,7 +267,7 @@ def parse_dmx_detail(url, category_selling_price="0", category_mrp_price="0"):
 def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
     print(f"\n--- 1. CÀO DIỆN MÁY XANH (DMX) ---")
     try:
-        response = smart_get(url, headers=HEADERS, verify=False, timeout=15)
+        response = smart_get(url, headers={**HEADERS, "Referer": "https://www.dienmayxanh.com"}, verify=False, timeout=15)
         if not response:
             print("[!] Không thể kết nối DMX (cả trực tiếp và proxy đều thất bại)")
             return []
@@ -447,6 +447,10 @@ def scrape_nk(url="https://www.nguyenkim.com/dieu-hoa.c?property=thuong-hieu-bra
             else:
                 model_name = name_val or "N/A"
             model_name = clean_text(model_name)
+            
+            # Kiểm tra nghiêm ngặt xem tên sản phẩm có chứa chữ "LG" không để tránh dính đề xuất của các hãng khác
+            if "lg" not in model_name.lower():
+                continue
             
             # Xây dựng link sản phẩm
             slugs = p.get("slugs", {})
