@@ -189,7 +189,7 @@ def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=10):
 # ==============================================================================
 def parse_dmx_detail(url, category_selling_price="0", category_mrp_price="0"):
     try:
-        response = smart_get(url, headers={**HEADERS, "Referer": "https://www.dienmayxanh.com"}, verify=False, timeout=15)
+        response = smart_get(url, headers=HEADERS, verify=False, timeout=15)
         if not response:
             return {"Status": "Error", "MRP": format_price(category_mrp_price), "Selling": format_price(category_selling_price), "Promotions": "Lỗi kết nối (timeout/proxy thất bại)"}
         if response.status_code == 404:
@@ -275,7 +275,7 @@ def parse_dmx_detail(url, category_selling_price="0", category_mrp_price="0"):
 def scrape_dmx(url="https://www.dienmayxanh.com/may-loc-khong-khi-lg"):
     print(f"\n--- 1. CÀO DIỆN MÁY XANH (DMX) ---")
     try:
-        response = smart_get(url, headers={**HEADERS, "Referer": "https://www.dienmayxanh.com"}, verify=False, timeout=15)
+        response = smart_get(url, headers=HEADERS, verify=False, timeout=15)
         if not response:
             print("[!] Không thể kết nối DMX (cả trực tiếp và proxy đều thất bại)")
             return []
@@ -538,9 +538,8 @@ def scrape_nk(url=None):
                     except Exception as e:
                         print(f"    [!] Lỗi parse JSON-LD: {e}")
             
+            # Sửa lại tên model cho đẹp
             model_name = clean_text(model_name)
-            if "lg" not in model_name.lower():
-                continue
             if model_name == "N/A" or not model_name:
                 meta_title = soup.find("meta", property="og:title")
                 if meta_title:
