@@ -162,10 +162,14 @@ def get_vn_proxies():
     print(f"[Proxy] -> Tổng cộng đã thu thập được {len(_VN_PROXIES)} proxy Việt Nam.")
     return _VN_PROXIES
 
+_LAST_WORKING_PROXY = None
+
 def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=20):
     """Gửi GET request: thử kết nối trực tiếp trước,
     nếu bị lỗi thì xoay vòng qua danh sách proxy (HTTP, SOCKS4, SOCKS5) Việt Nam.
     """
+    global _LAST_WORKING_PROXY
+    
     # 1. Thử kết nối trực tiếp
     try:
         r = requests.get(url, headers=headers, verify=verify, timeout=timeout)
@@ -175,7 +179,16 @@ def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=20):
     except Exception as e:
         print(f"  [smart_get] Lỗi kết nối trực tiếp đến {url[:60]}: {e}. Thử qua proxy...")
 
-    # 2. Dự phòng: Thử qua proxy Việt Nam
+    # 2. Thử lại proxy hoạt động gần nhất (nếu có) để tránh lặp lại vòng lặp timeout proxy chết
+    if _LAST_WORKING_PROXY:
+        try:
+            r = requests.get(url, headers=headers, proxies=_LAST_WORKING_PROXY[1], verify=verify, timeout=8)
+            if r.status_code == 200:
+                return r
+        except Exception:
+            _LAST_WORKING_PROXY = None # Reset cache proxy nếu đã chết
+
+    # 3. Dự phòng: Thử qua danh sách proxy Việt Nam
     proxies_list = get_vn_proxies()
     if not proxies_list:
         print("  [smart_get] [!] Không có proxy dự phòng nào.")
@@ -188,6 +201,7 @@ def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=20):
             if r.status_code == 200:
                 proto_name = list(proxies_dict.values())[0].split("://")[0].upper()
                 print(f"  [smart_get] [Thành công] Kết nối qua proxy {ip_port} ({proto_name})!")
+                _LAST_WORKING_PROXY = (ip_port, proxies_dict) # Cập nhật cache hoạt động
                 return r
         except Exception:
             pass
