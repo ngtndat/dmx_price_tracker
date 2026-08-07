@@ -125,24 +125,46 @@ def clean_text(text):
 _VN_PROXIES = []
 
 def get_vn_proxies():
-    """Tải danh sách proxy Việt Nam từ API công cộng (cache)."""
+    """Tải danh sách proxy Việt Nam từ nhiều giao thức (HTTP, SOCKS4, SOCKS5) để tăng độ ổn định."""
     global _VN_PROXIES
     if _VN_PROXIES:
         return _VN_PROXIES
-    print("[Proxy] Đang tải danh sách proxy Việt Nam từ API...")
-    try:
-        proxy_api_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=6000&country=VN&ssl=all&anonymity=all"
-        resp = requests.get(proxy_api_url, timeout=10)
-        _VN_PROXIES = [p.strip() for p in resp.text.strip().split("\n") if p.strip()]
-        print(f"[Proxy] -> Đã lấy được {len(_VN_PROXIES)} proxy Việt Nam.")
-    except Exception as e:
-        print(f"[Proxy] [!] Không thể lấy danh sách proxy: {e}")
-        _VN_PROXIES = []
+    print("[Proxy] Đang tải danh sách proxy Việt Nam từ các giao thức...")
+    
+    protocols = [
+        ("http", "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=6000&country=VN&ssl=all&anonymity=all"),
+        ("socks4", "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks4&timeout=6000&country=VN"),
+        ("socks5", "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5&timeout=6000&country=VN")
+    ]
+    
+    loaded_proxies = []
+    for proto, api_url in protocols:
+        try:
+            resp = requests.get(api_url, timeout=10)
+            if resp.status_code == 200:
+                raw_list = [p.strip() for p in resp.text.strip().split("\n") if p.strip()]
+                for ip_port in raw_list:
+                    if proto == "http":
+                        px = {
+                            "http": f"http://{ip_port}",
+                            "https": f"http://{ip_port}"
+                        }
+                    else:
+                        px = {
+                            "http": f"{proto}://{ip_port}",
+                            "https": f"{proto}://{ip_port}"
+                        }
+                    loaded_proxies.append((ip_port, px))
+        except Exception as e:
+            print(f"[Proxy] [!] Lỗi tải {proto} proxy: {e}")
+            
+    _VN_PROXIES = loaded_proxies
+    print(f"[Proxy] -> Tổng cộng đã thu thập được {len(_VN_PROXIES)} proxy Việt Nam.")
     return _VN_PROXIES
 
-def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=10):
+def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=20):
     """Gửi GET request: thử kết nối trực tiếp trước,
-    nếu bị timeout/lỗi kết nối thì xoay vòng qua danh sách proxy Việt Nam.
+    nếu bị lỗi thì xoay vòng qua danh sách proxy (HTTP, SOCKS4, SOCKS5) Việt Nam.
     """
     # 1. Thử kết nối trực tiếp
     try:
@@ -160,15 +182,12 @@ def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=10):
         return None
 
     # Thử qua từng proxy trong danh sách
-    for idx, proxy in enumerate(proxies_list[:max_proxies], 1):
-        proxies = {
-            "http": f"http://{proxy}",
-            "https": f"http://{proxy}"
-        }
+    for idx, (ip_port, proxies_dict) in enumerate(proxies_list[:max_proxies], 1):
         try:
-            r = requests.get(url, headers=headers, proxies=proxies, verify=verify, timeout=8)
+            r = requests.get(url, headers=headers, proxies=proxies_dict, verify=verify, timeout=8)
             if r.status_code == 200:
-                print(f"  [smart_get] [Thành công] Kết nối qua proxy {proxy}!")
+                proto_name = list(proxies_dict.values())[0].split("://")[0].upper()
+                print(f"  [smart_get] [Thành công] Kết nối qua proxy {ip_port} ({proto_name})!")
                 return r
         except Exception:
             pass

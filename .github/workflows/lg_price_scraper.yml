@@ -35,7 +35,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 gspread urllib3 matplotlib
+        run: pip install requests[socks] beautifulsoup4 gspread urllib3 matplotlib
 
       - name: Run full_colab_scraper.py
         env:
@@ -82,7 +82,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests beautifulsoup4 gspread urllib3 matplotlib
+        run: pip install requests[socks] beautifulsoup4 gspread urllib3 matplotlib
 
       - name: Run lg_ac_colab_scraper.py
         env:
