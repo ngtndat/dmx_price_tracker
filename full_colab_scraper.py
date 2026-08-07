@@ -133,51 +133,40 @@ def clean_text(text):
 _VN_PROXIES = []
 
 def get_vn_proxies():
-    """Tải danh sách proxy Việt Nam từ nhiều giao thức (HTTP, SOCKS4, SOCKS5) để tăng độ ổn định."""
+    """Tải danh sách proxy HTTP Việt Nam từ API công cộng (cache)."""
     global _VN_PROXIES
     if _VN_PROXIES:
         return _VN_PROXIES
-    print("[Proxy] Đang tải danh sách proxy Việt Nam từ các giao thức...")
-    
-    protocols = [
-        ("http", "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=6000&country=VN&ssl=all&anonymity=all"),
-        ("socks4", "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks4&timeout=6000&country=VN"),
-        ("socks5", "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5&timeout=6000&country=VN")
-    ]
-    
-    loaded_proxies = []
-    for proto, api_url in protocols:
-        try:
-            resp = requests.get(api_url, timeout=10)
-            if resp.status_code == 200:
-                raw_list = [p.strip() for p in resp.text.strip().split("\n") if p.strip()]
-                for ip_port in raw_list:
-                    if proto == "http":
-                        px = {
-                            "http": f"http://{ip_port}",
-                            "https": f"http://{ip_port}"
-                        }
-                    else:
-                        px = {
-                            "http": f"{proto}://{ip_port}",
-                            "https": f"{proto}://{ip_port}"
-                        }
-                    loaded_proxies.append((ip_port, px))
-        except Exception as e:
-            print(f"[Proxy] [!] Lỗi tải {proto} proxy: {e}")
+    print("[Proxy] Đang tải danh sách proxy Việt Nam từ API...")
+    try:
+        # Sử dụng API ProxyScrape chỉ lấy giao thức HTTP để đảm bảo an toàn, không bị treo socket
+        proxy_api_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=6000&country=VN&ssl=all&anonymity=all"
+        resp = requests.get(proxy_api_url, timeout=10)
+        raw_list = [p.strip() for p in resp.text.strip().split("\n") if p.strip()]
+        
+        # Tạo cấu trúc proxy dict chuẩn cho requests
+        loaded_proxies = []
+        for ip_port in raw_list:
+            px = {
+                "http": f"http://{ip_port}",
+                "https": f"http://{ip_port}"
+            }
+            loaded_proxies.append((ip_port, px))
             
-    _VN_PROXIES = loaded_proxies
-    print(f"[Proxy] -> Tổng cộng đã thu thập được {len(_VN_PROXIES)} proxy Việt Nam.")
+        _VN_PROXIES = loaded_proxies
+        print(f"[Proxy] -> Đã lấy được {len(_VN_PROXIES)} proxy HTTP Việt Nam.")
+    except Exception as e:
+        print(f"[Proxy] [!] Không thể lấy danh sách proxy: {e}")
+        _VN_PROXIES = []
     return _VN_PROXIES
 
 _LAST_WORKING_PROXY = None
-_PROXIES_BLOCKED = False  # Cờ đánh dấu nếu toàn bộ proxy bị chặn để tránh quét treo tiến trình
 
-def smart_get(url, headers=HEADERS, timeout=8, verify=False, max_proxies=20):
+def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=20):
     """Gửi GET request: thử kết nối trực tiếp trước,
     nếu bị lỗi thì xoay vòng qua danh sách proxy (HTTP, SOCKS4, SOCKS5) Việt Nam.
     """
-    global _LAST_WORKING_PROXY, _PROXIES_BLOCKED
+    global _LAST_WORKING_PROXY
     
     # 1. Thử kết nối trực tiếp
     try:
@@ -197,11 +186,6 @@ def smart_get(url, headers=HEADERS, timeout=8, verify=False, max_proxies=20):
         except Exception:
             _LAST_WORKING_PROXY = None # Reset cache proxy nếu đã chết
 
-    # Nếu trước đó toàn bộ proxy đã thất bại (bị block hoặc list proxy chết hết),
-    # bỏ qua việc dò tiếp danh sách proxy để tránh treo tiến trình GitHub Actions.
-    if _PROXIES_BLOCKED:
-        return None
-
     # 3. Dự phòng: Thử qua danh sách proxy Việt Nam
     proxies_list = get_vn_proxies()
     if not proxies_list:
@@ -220,8 +204,7 @@ def smart_get(url, headers=HEADERS, timeout=8, verify=False, max_proxies=20):
         except Exception:
             pass
             
-    print(f"  [smart_get] [!] Tất cả kết nối trực tiếp & proxy đều thất bại cho: {url}. Đánh dấu khóa proxy để tránh treo.")
-    _PROXIES_BLOCKED = True
+    print(f"  [smart_get] [!] Tất cả kết nối trực tiếp & proxy đều thất bại cho: {url}")
     return None
 
 # ==============================================================================
