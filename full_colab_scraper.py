@@ -34,6 +34,14 @@ SCREENSHOT_RANGE = ["B3:T13"]
 # Tab (Sheet) dùng để chụp ảnh báo cáo:
 SCREENSHOT_SHEET_NAME = "DB"
 
+# 7. Danh sách URL sản phẩm Nguyễn Kim (NK) cần cào riêng biệt từng trang:
+NK_PRODUCT_URLS = [
+    "https://www.nguyenkim.com/may-loc-khong-khi-lg-puricare-as60ghwg0-AS60GHWG0ABAE_1",
+    "https://www.nguyenkim.com/may-loc-khong-khi-lg-360-do-alpha-2-tang-mau-vang-be-as10gdby0-abae-AS10GDBY0ABAE1",
+    "https://www.nguyenkim.com/may-loc-khong-khi-lg-360-do-alpha-1-tang-mau-vang-be-as65gdby0-abae-AS65GDBY0ABAE1",
+    "https://www.nguyenkim.com/may-loc-khong-khi-lg-puricare-aero-tower-hit-mau-be-fs15gpbk0-abae-FS15GPBK0ABAE1"
+]
+
 # ==============================================================================
 
 import requests
@@ -254,9 +262,28 @@ def parse_dmcl_detail(url, category_selling_price="0", category_mrp_price="0"):
         is_discontinued = "ngừng kinh doanh" in response.text.lower() or "ngung kinh doanh" in response.text.lower() or "không kinh doanh" in response.text.lower()
         
         selling_price = "0"
-        price_sale_tag = soup.find(class_="price_sale")
-        if price_sale_tag:
-            selling_price = clean_price(price_sale_tag.text)
+        info_price = soup.find(class_="info_pro_price")
+        if info_price:
+            # 1. Trực tiếp lấy từ box_price_layout_cost (thường chứa thẻ strong)
+            cost_layout = info_price.find(class_="box_price_layout_cost")
+            if cost_layout:
+                strong_cost = cost_layout.find("strong")
+                if strong_cost:
+                    selling_price = clean_price(strong_cost.text)
+            
+            # 2. Nếu chưa có, tìm strong class price_sale
+            if selling_price == "0" or not selling_price:
+                sale_strong = info_price.find("strong", class_="price_sale")
+                if sale_strong:
+                    selling_price = clean_price(sale_strong.text)
+            
+            # 3. Nếu chưa có, tìm thẻ bất kỳ có class price_sale/price bên trong info_pro_price
+            if selling_price == "0" or not selling_price:
+                sale_tag = info_price.find(class_="price_sale") or info_price.find(class_="price")
+                if sale_tag:
+                    selling_price = clean_price(sale_tag.text)
+                    
+        # Fallback nếu không quét được hoặc giá bằng 0
         if (selling_price == "0" or not selling_price) and category_selling_price != "0":
             selling_price = category_selling_price
             
@@ -348,50 +375,122 @@ def scrape_dmcl(url="https://dienmaycholon.com/may-loc-khong-khi-lg"):
 # ==============================================================================
 # 3. NGUYEN KIM SCRAPER (NK)
 # ==============================================================================
-def scrape_nk(url="https://www.nguyenkim.com/may-loc-khong-khi-lg"):
+def scrape_nk(url=None):
+    """Cào chi tiết từng trang Nguyễn Kim theo danh sách link được cấu hình."""
     print(f"\n--- 3. CÀO NGUYỄN KIM (NK) ---")
-    try:
-        response = requests.get(url, headers=HEADERS, verify=False, timeout=15)
-        if response.status_code != 200:
-            print(f"[!] Lỗi kết nối Nguyễn Kim: {response.status_code}")
-            return []
-        soup = BeautifulSoup(response.text, "html.parser")
+    results = []
+    
+    # Sử dụng danh sách URL từ cấu hình toàn cục
+    urls_to_scrape = NK_PRODUCT_URLS
+    if not urls_to_scrape:
+        print("[!] Không có link sản phẩm Nguyễn Kim nào được cấu hình.")
+        return []
         
-        product_renders = soup.find_all("a", class_="product-render")
-        print(f"Tìm thấy {len(product_renders)} sản phẩm trên Nguyễn Kim.")
-        results = []
-        for idx, a in enumerate(product_renders, 1):
-            model_name = a.get("aria-label") or clean_text(a.text)
-            href = a.get("href")
-            full_link = href if href.startswith("http") else f"https://www.nguyenkim.com{href}"
-            full_link = full_link.split("?")[0]
+    print(f"Bắt đầu quét {len(urls_to_scrape)} link Nguyễn Kim...")
+    
+    for idx, target_url in enumerate(urls_to_scrape, 1):
+        target_url = target_url.strip()
+        if not target_url:
+            continue
             
+        print(f"[{idx}/{len(urls_to_scrape)}] Đang cào NK: {target_url}")
+        try:
+            response = requests.get(target_url, headers=HEADERS, verify=False, timeout=15)
+            if response.status_code != 200:
+                print(f"    [!] Lỗi tải trang (HTTP {response.status_code})")
+                continue
+                
+            soup = BeautifulSoup(response.text, "html.parser")
+            
+            # Khởi tạo mặc định
+            model_name = "N/A"
             selling_price = "0"
             mrp_price = "0"
-            sibling = a.next_sibling
-            while sibling:
-                if sibling.name == "script" and "dataRenderProduct" in sibling.text:
-                    match = re.search(r"dataRenderProduct\.push\(\s*({.*?})\s*\);", sibling.text, re.DOTALL)
-                    if match:
-                        try:
-                            p_data = json.loads(match.group(1))
-                            selling_price = str(p_data.get("price", "0"))
-                            mrp_price = str(p_data.get("list_price", "0"))
-                        except Exception:
-                            pass
-                    break
-                sibling = sibling.next_sibling
-                
-            print(f"[{idx}/{len(product_renders)}] NK: {model_name}")
+            status = "đang kinh doanh"
+            
+            # Sử dụng __NEXT_DATA__ (chính xác và đầy đủ nhất)
+            next_data_script = soup.find("script", id="__NEXT_DATA__")
+            parsed_via_next = False
+            
+            if next_data_script:
+                try:
+                    data = json.loads(next_data_script.string)
+                    p_data = data.get("props", {}).get("pageProps", {}).get("pageDetail", {}).get("data", {})
+                    if p_data:
+                        # Tên sản phẩm
+                        name_val = p_data.get("name")
+                        if isinstance(name_val, dict):
+                            model_name = name_val.get("vi") or name_val.get("en") or "N/A"
+                        else:
+                            model_name = name_val or "N/A"
+                            
+                        # Giá bán & Giá hãng
+                        final_p = p_data.get("finalPrice")
+                        orig_p = p_data.get("price")
+                        if final_p is not None:
+                            selling_price = str(final_p)
+                        if orig_p is not None:
+                            mrp_price = str(orig_p)
+                            
+                        # Trạng thái kho hàng
+                        has_stock = p_data.get("hasStock")
+                        stock_status = p_data.get("stockStatus")
+                        if has_stock is False or stock_status == "outOfStock":
+                            status = "hết hàng"
+                            
+                        parsed_via_next = True
+                except Exception as e:
+                    print(f"    [!] Lỗi parse JSON __NEXT_DATA__: {e}")
+            
+            # Fallback sang JSON-LD Product Schema nếu Next.js không có
+            if not parsed_via_next:
+                for script in soup.find_all("script", type="application/ld+json"):
+                    try:
+                        data = json.loads(script.string)
+                        if data.get("@type") == "Product":
+                            model_name = data.get("name", "N/A")
+                            offers = data.get("offers", {})
+                            if offers:
+                                if isinstance(offers, dict):
+                                    selling_price = str(offers.get("price", "0"))
+                                    mrp_price = selling_price
+                                    avail = offers.get("availability", "")
+                                    if "OutOfStock" in avail:
+                                        status = "hết hàng"
+                                elif isinstance(offers, list) and len(offers) > 0:
+                                    selling_price = str(offers[0].get("price", "0"))
+                                    mrp_price = selling_price
+                                    avail = offers[0].get("availability", "")
+                                    if "OutOfStock" in avail:
+                                        status = "hết hàng"
+                            break
+                    except Exception as e:
+                        print(f"    [!] Lỗi parse JSON-LD: {e}")
+            
+            # Sửa lại tên model cho đẹp
+            model_name = clean_text(model_name)
+            if model_name == "N/A" or not model_name:
+                meta_title = soup.find("meta", property="og:title")
+                if meta_title:
+                    model_name = clean_text(meta_title.get("content", "N/A").split("|")[0])
+            
             results.append({
-                "Page Title": "NguyenKim", "Tên Model": model_name, "Status": "đang kinh doanh", "direct product link": full_link,
-                "MRP price": format_price(mrp_price), "Selling price": format_price(selling_price), 
+                "Page Title": "NguyenKim", 
+                "Tên Model": model_name, 
+                "Status": status, 
+                "direct product link": target_url,
+                "MRP price": format_price(mrp_price), 
+                "Selling price": format_price(selling_price), 
                 "Thông tin chương trình khuyến mãi": "Xem khuyến mãi tại link sản phẩm."
             })
-        return results
-    except Exception as e:
-        print(f"[!] Lỗi cào Nguyễn Kim: {e}")
-        return []
+            print(f"    -> Thành công: {model_name} (Giá: {format_price(selling_price)})")
+            
+        except Exception as e:
+            print(f"    [!] Lỗi cào link {target_url}: {e}")
+            
+        time.sleep(1.5)
+        
+    return results
 
 # ==============================================================================
 # 4. CELLPHONES SCRAPER (CPS)
