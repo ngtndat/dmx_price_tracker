@@ -416,7 +416,7 @@ def scrape_dmcl(url="https://dienmaycholon.com/may-lanh-lg"):
 # ==============================================================================
 # 3. NGUYEN KIM SCRAPER (NK)
 # ==============================================================================
-def scrape_nk(url="https://www.nguyenkim.com/may-lanh-lg"):
+def scrape_nk(url="https://www.nguyenkim.com/dieu-hoa.c?property=thuong-hieu-brand:LG"):
     print(f"\n--- 3. CÀO NGUYỄN KIM (NK) ---")
     try:
         response = smart_get(url, headers=HEADERS, verify=False, timeout=15)
@@ -426,39 +426,63 @@ def scrape_nk(url="https://www.nguyenkim.com/may-lanh-lg"):
         if response.status_code != 200:
             print(f"[!] Lỗi kết nối Nguyễn Kim: {response.status_code}")
             return []
-        soup = BeautifulSoup(response.text, "html.parser")
         
-        product_renders = soup.find_all("a", class_="product-render")
-        print(f"Tìm thấy {len(product_renders)} sản phẩm trên Nguyễn Kim.")
-        results = []
-        for idx, a in enumerate(product_renders, 1):
-            model_name = a.get("aria-label") or clean_text(a.text)
-            href = a.get("href")
-            full_link = href if href.startswith("http") else f"https://www.nguyenkim.com{href}"
-            full_link = full_link.split("?")[0]
+        soup = BeautifulSoup(response.text, "html.parser")
+        next_data_script = soup.find("script", id="__NEXT_DATA__")
+        if not next_data_script:
+            print("[!] Không tìm thấy thẻ __NEXT_DATA__ trên trang Nguyễn Kim.")
+            return []
             
-            selling_price = "0"
-            mrp_price = "0"
-            sibling = a.next_sibling
-            while sibling:
-                if sibling.name == "script" and "dataRenderProduct" in sibling.text:
-                    match = re.search(r"dataRenderProduct\.push\(\s*({.*?})\s*\);", sibling.text, re.DOTALL)
-                    if match:
-                        try:
-                            p_data = json.loads(match.group(1))
-                            selling_price = str(p_data.get("price", "0"))
-                            mrp_price = str(p_data.get("list_price", "0"))
-                        except Exception:
-                            pass
-                    break
-                sibling = sibling.next_sibling
+        data = json.loads(next_data_script.string)
+        page_detail = data.get("props", {}).get("pageProps", {}).get("pageDetail", {})
+        products_list = page_detail.get("data", [])
+        print(f"Tìm thấy {len(products_list)} sản phẩm trên Nguyễn Kim.")
+        
+        results = []
+        for idx, p in enumerate(products_list, 1):
+            # Tên sản phẩm
+            name_val = p.get("name")
+            if isinstance(name_val, dict):
+                model_name = name_val.get("vi") or name_val.get("en") or "N/A"
+            else:
+                model_name = name_val or "N/A"
+            model_name = clean_text(model_name)
+            
+            # Xây dựng link sản phẩm
+            slugs = p.get("slugs", {})
+            slug_val = ""
+            if isinstance(slugs, dict):
+                val_dict = slugs.get("value", {})
+                postfix = slugs.get("postfix", "")
+                if isinstance(val_dict, dict):
+                    slug_val = val_dict.get("vi") or val_dict.get("en") or ""
+                slug_val = f"{slug_val}{postfix}"
                 
-            print(f"[{idx}/{len(product_renders)}] NK: {model_name}")
+            if slug_val:
+                full_link = f"https://www.nguyenkim.com/{slug_val}"
+            else:
+                code_val = p.get("code", "")
+                full_link = f"https://www.nguyenkim.com/dieu-hoa-lg-{code_val}"
+                
+            # Giá bán & Giá hãng
+            selling_price = str(p.get("finalPrice", "0"))
+            mrp_price = str(p.get("price", "0"))
+            if mrp_price == "0":
+                mrp_price = selling_price
+                
+            # Tình trạng kho hàng
+            status = "đang kinh doanh"
+            stock_status = p.get("stockStatus", "")
+            if stock_status == "outOfStock" or p.get("hasStock") is False:
+                status = "hết hàng"
+                
+            print(f"[{idx}/{len(products_list)}] NK: {model_name} (Giá: {format_price(selling_price)})")
             results.append({
-                "Page Title": "NguyenKim", "Tên Model": model_name, "Status": "đang kinh doanh", "direct product link": full_link,
+                "Page Title": "NguyenKim", "Tên Model": model_name, "Status": status, "direct product link": full_link,
                 "MRP price": format_price(mrp_price), "Selling price": format_price(selling_price), 
                 "Thông tin chương trình khuyến mãi": "Xem khuyến mãi tại link sản phẩm."
             })
+            
         return results
     except Exception as e:
         print(f"[!] Lỗi cào Nguyễn Kim: {e}")

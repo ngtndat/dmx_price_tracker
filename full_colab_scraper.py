@@ -39,7 +39,13 @@ NK_PRODUCT_URLS = [
     "https://www.nguyenkim.com/may-loc-khong-khi-lg-puricare-as60ghwg0-AS60GHWG0ABAE_1",
     "https://www.nguyenkim.com/may-loc-khong-khi-lg-360-do-alpha-2-tang-mau-vang-be-as10gdby0-abae-AS10GDBY0ABAE1",
     "https://www.nguyenkim.com/may-loc-khong-khi-lg-360-do-alpha-1-tang-mau-vang-be-as65gdby0-abae-AS65GDBY0ABAE1",
-    "https://www.nguyenkim.com/may-loc-khong-khi-lg-puricare-aero-tower-hit-mau-be-fs15gpbk0-abae-FS15GPBK0ABAE1"
+    "https://www.nguyenkim.com/may-loc-khong-khi-lg-puricare-aero-booster-as55ggsy0-abae-mau-be-AS55GGSY0ABAE1",
+    "https://www.nguyenkim.com/may-loc-khong-khi-lg-puricare-aero-tower-hit-mau-be-fs15gpbk0-abae-FS15GPBK0ABAE1",
+    "https://www.nguyenkim.com/may-loc-khong-khi-kem-loa-lg-puricare-aero-speaker-mau-trang-AS20GSHU0ABAE",
+    "https://www.nguyenkim.com/may-loc-khong-khi-lg-puricare-aero-furniture-as20gpwu0-abae-mau-trang-AS20GPWU0ABAE",
+    "https://www.nguyenkim.com/may-loc-khong-khi-lg-puricare-aero-furniture-as20gpbk0-abae-mau-nau-AS20GPBK0ABAE",
+    "https://www.nguyenkim.com/may-hut-am-lg-dd23gmwe1-DD23GMWE1ABAE",
+    "https://www.nguyenkim.com/may-hut-am-lg-dual-inverter-19l-md19gqge0-abae-MD19GQGE0ABAE"
 ]
 
 # ==============================================================================
