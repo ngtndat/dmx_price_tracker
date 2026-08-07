@@ -163,12 +163,13 @@ def get_vn_proxies():
     return _VN_PROXIES
 
 _LAST_WORKING_PROXY = None
+_PROXIES_BLOCKED = False  # Cờ đánh dấu nếu toàn bộ proxy bị chặn để tránh quét treo tiến trình
 
-def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=20):
+def smart_get(url, headers=HEADERS, timeout=8, verify=False, max_proxies=20):
     """Gửi GET request: thử kết nối trực tiếp trước,
     nếu bị lỗi thì xoay vòng qua danh sách proxy (HTTP, SOCKS4, SOCKS5) Việt Nam.
     """
-    global _LAST_WORKING_PROXY
+    global _LAST_WORKING_PROXY, _PROXIES_BLOCKED
     
     # 1. Thử kết nối trực tiếp
     try:
@@ -188,6 +189,11 @@ def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=20):
         except Exception:
             _LAST_WORKING_PROXY = None # Reset cache proxy nếu đã chết
 
+    # Nếu trước đó toàn bộ proxy đã thất bại (bị block hoặc list proxy chết hết),
+    # bỏ qua việc dò tiếp danh sách proxy để tránh treo tiến trình GitHub Actions.
+    if _PROXIES_BLOCKED:
+        return None
+
     # 3. Dự phòng: Thử qua danh sách proxy Việt Nam
     proxies_list = get_vn_proxies()
     if not proxies_list:
@@ -206,7 +212,8 @@ def smart_get(url, headers=HEADERS, timeout=15, verify=False, max_proxies=20):
         except Exception:
             pass
             
-    print(f"  [smart_get] [!] Tất cả kết nối trực tiếp & proxy đều thất bại cho: {url}")
+    print(f"  [smart_get] [!] Tất cả kết nối trực tiếp & proxy đều thất bại cho: {url}. Đánh dấu khóa proxy để tránh treo.")
+    _PROXIES_BLOCKED = True
     return None
 
 # ==============================================================================
