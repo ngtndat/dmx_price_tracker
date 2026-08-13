@@ -136,12 +136,13 @@ async function openViewer(product) {
     ? `<strong>Sản phẩm treo tường</strong>: Hướng camera vào <strong>BỨC TƯỜNG</strong>, di chuyển chậm để quét mặt phẳng, rồi bấm <strong>Bật AR</strong>.`
     : `<strong>Sản phẩm đặt sàn</strong>: Hướng camera xuống <strong>MẶT SÀN</strong>, di chuyển chậm để quét mặt phẳng, rồi bấm <strong>Bật AR</strong>.`;
 
-  // Set AR placement mode & wall orientation fix
-  mv.setAttribute('ar-placement', isWall ? 'wall' : 'floor');
+  // Set AR placement mode & precise orientation per product type
   if (isWall) {
+    mv.setAttribute('ar-placement', 'wall');
     mv.setAttribute('orientation', '-90deg 0deg 0deg');
   } else {
-    mv.removeAttribute('orientation');
+    mv.setAttribute('ar-placement', 'floor');
+    mv.setAttribute('orientation', '0deg 0deg 0deg');
   }
 
   // Open modal
@@ -274,7 +275,8 @@ function closeARModal() {
   const mv = $('modelViewer');
   if (mv) {
     mv.removeAttribute('src');
-    mv.removeAttribute('ar-placement');
+    mv.setAttribute('orientation', '0deg 0deg 0deg');
+    mv.setAttribute('ar-placement', 'floor');
   }
   showLoading(false);
   const arBtn = $('arBtn');
