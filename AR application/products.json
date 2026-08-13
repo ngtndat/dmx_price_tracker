@@ -1,5 +1,60 @@
 [
   {
+    "id": "tv-65qned9masa",
+    "name": "Smart TV LG QNED evo AI 65 Inch 65QNED9MASA",
+    "category": "TV QNED",
+    "categoryKey": "tv",
+    "placement": "floor",
+    "glbFile": "models/tv_65qned_lg.glb",
+    "glbSizeMB": 8.5,
+    "dimensions": {
+      "height": 91.0,
+      "width": 145.6,
+      "depth": 28.5,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "images/products/tv_qned_front.jpg"
+    },
+    "description": "Smart TV LG QNED evo AI MiniLED 4K 65 Inch 2025. Model 3D chính hãng trích xuất từ LG Việt Nam, chuẩn tỉ lệ 1:1."
+  },
+  {
+    "id": "air-conditioner-lg",
+    "name": "Máy lạnh Inverter Treo tường LG IDC12M2",
+    "category": "Máy lạnh",
+    "categoryKey": "ac",
+    "placement": "wall",
+    "glbFile": "models/ac_lg.glb",
+    "glbSizeMB": 2.4,
+    "dimensions": {
+      "height": 30.7,
+      "width": 79.9,
+      "depth": 23.5,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "images/products/ac_front.png"
+    },
+    "description": "Máy lạnh treo tường công nghệ Inverter tiết kiệm điện, thiết kế bo cong thanh lịch. Model 3D chuẩn tỉ lệ 1:1 đặt tường."
+  },
+  {
+    "id": "air-purifier-lg",
+    "name": "Máy lọc không khí LG PuriCare MD19GQGE0",
+    "category": "Máy lọc KK",
+    "categoryKey": "purifier",
+    "placement": "floor",
+    "glbFile": "models/purifier_lg.glb",
+    "glbSizeMB": 6.1,
+    "dimensions": {
+      "height": 59.6,
+      "width": 38.6,
+      "depth": 38.6,
+      "unit": "cm"
+    },
+    "images": {},
+    "description": "Máy lọc không khí LG PuriCare 360° với bộ lọc HEPA 13. Model 3D tối ưu tải nhanh cho AR di động, chuẩn tỉ lệ 1:1."
+  },
+  {
     "id": "refrigerator-lg",
     "name": "Tủ lạnh LG Inverter Multi-Door",
     "category": "Tủ lạnh",
@@ -32,75 +87,5 @@
       "front": "images/products/washer_front.png"
     },
     "description": "Tháp giặt sấy tích hợp 2 trong 1 thiết kế đứng tiết kiệm diện tích, điều khiển cảm ứng thông minh."
-  },
-  {
-    "id": "tv-oled-stand",
-    "name": "TV OLED 4K (Có chân đế)",
-    "category": "TV OLED",
-    "categoryKey": "tv",
-    "placement": "floor",
-    "dimensions": {
-      "height": 109.9,
-      "width": 185.1,
-      "depth": 29.0,
-      "unit": "cm"
-    },
-    "images": {
-      "front": "images/products/tv_front.png"
-    },
-    "description": "TV OLED siêu mỏng 83 inch hình ảnh sắc nét, tích hợp chân đế để bàn hợp kim sang trọng."
-  },
-  {
-    "id": "tv-oled-wall",
-    "name": "TV OLED 4K (Treo tường - Không chân đế)",
-    "category": "TV OLED",
-    "categoryKey": "tv",
-    "placement": "wall",
-    "dimensions": {
-      "height": 105.5,
-      "width": 185.1,
-      "depth": 5.53,
-      "unit": "cm"
-    },
-    "images": {
-      "front": "images/products/tv_front.png"
-    },
-    "description": "TV OLED thiết kế gallery áp tường siêu mỏng, tối ưu cho góc nhìn phòng khách hiện đại."
-  },
-  {
-    "id": "air-conditioner-lg",
-    "name": "Máy lạnh Inverter Treo tường LG IDC12M2",
-    "category": "Máy lạnh",
-    "categoryKey": "ac",
-    "placement": "wall",
-    "glbFile": "models/ac_lg.glb",
-    "glbSizeMB": 2.4,
-    "dimensions": {
-      "height": 30.7,
-      "width": 79.9,
-      "depth": 23.5,
-      "unit": "cm"
-    },
-    "images": {
-      "front": "images/products/ac_front.png"
-    },
-    "description": "Máy lạnh treo tường công nghệ Inverter tiết kiệm điện, thiết kế bo cong thanh lịch. Model 3D chính xác tỉ lệ 1:1."
-  },
-  {
-    "id": "air-purifier-lg",
-    "name": "Máy lọc không khí LG PuriCare MD19GQGE0",
-    "category": "Máy lọc KK",
-    "categoryKey": "purifier",
-    "placement": "floor",
-    "glbFile": "models/purifier_lg.glb",
-    "glbSizeMB": 6.1,
-    "dimensions": {
-      "height": 59.6,
-      "width": 38.6,
-      "depth": 38.6,
-      "unit": "cm"
-    },
-    "images": {},
-    "description": "Máy lọc không khí LG PuriCare 360° với bộ lọc HEPA 13, làm sạch không khí theo chu kỳ. Model 3D tối ưu tải nhanh cho AR di động."
   }
 ]
