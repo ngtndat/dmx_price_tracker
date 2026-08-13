@@ -1,8 +1,8 @@
 /**
- * LG AR SpaceVision — app.js v5
+ * LG AR SpaceVision — app.js v6
  * High-performance mobile AR & 3D WebViewer
- * - Native ARKit (iOS Safari) & ARCore (Android Chrome) via <model-viewer>
- * - Clean ASCII asset paths for cross-platform reliability
+ * - Full-card tap support for seamless mobile interaction
+ * - Cache-busted products.json fetching
  * - Real-time progress bar with percent indicator
  * - Wall & Floor intelligent surface detection
  */
@@ -23,10 +23,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupModelViewerEvents();
 });
 
-// ─── Load products.json ──────────────────────────
+// ─── Load products.json (with cache buster) ──────
 async function loadProducts() {
   try {
-    const r = await fetch('products.json');
+    const r = await fetch('products.json?v=' + Date.now());
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     state.products = await r.json();
     state.filteredProducts = [...state.products];
@@ -81,7 +81,7 @@ function renderProducts() {
          </div>`;
 
     card.innerHTML = `
-      <div class="card-thumb">
+      <div class="card-thumb" style="cursor:${isComingSoon ? 'default' : 'pointer'}">
         <span class="card-placement-badge ${isComingSoon ? 'coming-soon' : (isWall ? 'wall' : '')}">
           <i class="bi bi-${isComingSoon ? 'hourglass-split' : (isWall ? 'layout-wtf' : 'grid')}"></i>
           ${isComingSoon ? 'Sắp ra mắt' : (isWall ? 'Treo tường (Wall)' : 'Đặt sàn (Floor)')}
@@ -91,7 +91,7 @@ function renderProducts() {
       </div>
       <div class="card-body">
         <div class="card-cat">${prod.category}</div>
-        <div class="card-name">${prod.name}</div>
+        <div class="card-name" style="cursor:${isComingSoon ? 'default' : 'pointer'}">${prod.name}</div>
         <div class="card-specs">
           <div class="spec"><span class="spec-label">Cao</span><span class="spec-val">${prod.dimensions?.height ?? '?'} cm</span></div>
           <div class="spec"><span class="spec-label">Ngang</span><span class="spec-val">${prod.dimensions?.width ?? '?'} cm</span></div>
@@ -100,7 +100,11 @@ function renderProducts() {
         ${actionHtml}
       </div>`;
 
+    // Card click behavior
     if (!isComingSoon) {
+      // Tap on card thumb / title / body opens viewer
+      card.querySelector('.card-thumb').addEventListener('click', () => openViewer(prod));
+      card.querySelector('.card-name').addEventListener('click', () => openViewer(prod));
       card.querySelector('.btn-ar-launch').addEventListener('click', e => {
         e.stopPropagation();
         openViewer(prod);
@@ -145,11 +149,11 @@ async function openViewer(product) {
 
   // Set 3D model source
   if (product.glbFile) {
-    mv.src = product.glbFile;
+    mv.setAttribute('src', product.glbFile);
   } else {
     try {
       const url = await generateFallbackGLB(product);
-      mv.src = url;
+      mv.setAttribute('src', url);
     } catch (err) {
       console.error('Fallback GLB error:', err);
       showLoading(false);
@@ -293,6 +297,7 @@ function handleAddProduct(e) {
     id: `custom-${Date.now()}`,
     name, category,
     categoryKey: catMap[category] || 'other',
+    status: 'ready',
     placement,
     dimensions: { height, width, depth, unit: 'cm' },
     images: { front: frontUrl },
