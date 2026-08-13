@@ -1,554 +1,338 @@
 /**
- * AR Product Viewer Engine
- * Instant User Gesture iOS Safari Camera Stream & 3D Interactive WebAR.
+ * LG AR SpaceVision — app.js v4
+ * Fix: encode GLB path properly before setting model-viewer src
+ * Fix: loading overlay controlled by model-viewer events (not timeout)
+ * Fix: wall/floor placement + scan instructions
  */
 
-// Application State
 const state = {
   products: [],
   filteredProducts: [],
-  activeCategory: 'all',
   selectedProduct: null,
-  glbCache: new Map(),
-  
-  // Live Camera WebAR state
-  cameraStream: null,
-  threeScene: null,
-  threeCamera: null,
-  threeRenderer: null,
-  productMesh: null,
-  animFrameId: null,
-  isCameraOpening: false,
-  touchState: {
-    isDragging: false,
-    lastX: 0,
-    lastY: 0,
-    posX: 0,
-    posY: 0,
-    rotationY: 0
-  }
 };
 
-// DOM Elements
-const elements = {
-  productsGrid: document.getElementById('productsGrid'),
-  categoryChips: document.querySelectorAll('.category-chip'),
-  arModal: document.getElementById('arModal'),
-  arModalTitle: document.getElementById('arModalTitle'),
-  arModalClose: document.getElementById('arModalClose'),
-  modelViewer: document.getElementById('modelViewer'),
-  scaleBadge: document.getElementById('scaleBadge'),
-  uploadModal: document.getElementById('uploadModal'),
-  btnOpenUpload: document.getElementById('btnOpenUpload'),
-  uploadModalClose: document.getElementById('uploadModalClose'),
-  addProductForm: document.getElementById('addProductForm'),
-  
-  // Live Camera WebAR Elements
-  btnModalLaunchCamera: document.getElementById('btnModalLaunchCamera'),
-  liveCameraModal: document.getElementById('liveCameraModal'),
-  btnCloseLiveCamera: document.getElementById('btnCloseLiveCamera'),
-  cameraVideo: document.getElementById('cameraVideo'),
-  cameraCanvas: document.getElementById('cameraCanvas'),
-  liveCameraTitle: document.getElementById('liveCameraTitle'),
-  btnCapturePhoto: document.getElementById('btnCapturePhoto')
-};
+const $ = id => document.getElementById(id);
 
-// Initialize App
+// ─── Init ───────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   await loadProducts();
-  setupEventListeners();
+  setupFilters();
+  setupModals();
+  setupModelViewerEvents();
 });
 
-// Load products from JSON
+// ─── Load products.json ──────────────────────────
 async function loadProducts() {
   try {
-    const res = await fetch('products.json');
-    state.products = await res.json();
+    const r = await fetch('products.json');
+    state.products = await r.json();
     state.filteredProducts = [...state.products];
     renderProducts();
-  } catch (err) {
-    console.error('Failed to load products.json:', err);
+  } catch (e) {
+    console.error('products.json load failed:', e);
   }
 }
 
-// Render product cards with touch-friendly action buttons
+// ─── Render cards ────────────────────────────────
 function renderProducts() {
-  elements.productsGrid.innerHTML = '';
+  const grid = $('productsGrid');
+  grid.innerHTML = '';
 
-  if (state.filteredProducts.length === 0) {
-    elements.productsGrid.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">
-        <i class="ri-inbox-line" style="font-size: 3rem;"></i>
-        <p style="margin-top: 1rem;">Không tìm thấy sản phẩm phù hợp.</p>
-      </div>
-    `;
+  if (!state.filteredProducts.length) {
+    grid.innerHTML = `<div class="empty-state"><i class="bi bi-inbox"></i><p>Không tìm thấy sản phẩm.</p></div>`;
     return;
   }
 
   state.filteredProducts.forEach(prod => {
     const card = document.createElement('div');
     card.className = 'product-card';
+    const thumb = prod.images?.front || Object.values(prod.images || {}).find(v => v) || null;
+    const isWall = prod.placement === 'wall';
+    const hasGLB = !!prod.glbFile;
+    const sizeMB  = prod.glbSizeMB || null;
 
-    const thumbImage = prod.images.front || Object.values(prod.images)[0];
-    const placementClass = prod.placement === 'wall' ? 'wall' : 'floor';
-    const placementText = prod.placement === 'wall' ? 'Treo tường (Wall)' : 'Đặt sàn (Floor)';
+    // Thumbnail: use image if available, else colored placeholder
+    const thumbHtml = thumb
+      ? `<img src="${encodePath(thumb)}" alt="${prod.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+         <div class="thumb-placeholder" style="display:none"><i class="bi bi-box-seam"></i></div>`
+      : `<div class="thumb-placeholder"><i class="bi bi-${isWall ? 'wind' : 'tornado'}"></i></div>`;
 
     card.innerHTML = `
-      <div class="product-thumb-container">
-        <span class="placement-badge ${placementClass}">
-          <i class="${prod.placement === 'wall' ? 'ri-layout-3-line' : 'ri-grid-line'}"></i> ${placementText}
+      <div class="card-thumb">
+        <span class="card-placement-badge ${isWall ? 'wall' : ''}">
+          <i class="bi bi-${isWall ? 'layout-wtf' : 'grid'}"></i>
+          ${isWall ? 'Treo tường' : 'Đặt sàn'}
         </span>
-        <img src="${encodeURI(thumbImage)}" alt="${prod.name}" class="product-thumb-img" loading="lazy" />
+        ${hasGLB ? `<span class="card-glb-badge"><i class="bi bi-box"></i> 3D ${sizeMB ? `~${sizeMB}MB` : 'GLB'}</span>` : ''}
+        ${thumbHtml}
       </div>
-      <div class="product-info">
-        <span class="product-category">${prod.category}</span>
-        <h3 class="product-title">${prod.name}</h3>
-        
-        <div class="product-specs">
-          <div class="spec-item">
-            <span class="spec-label">Cao</span>
-            <span class="spec-val">${prod.dimensions.height} cm</span>
-          </div>
-          <div class="spec-item">
-            <span class="spec-label">Ngang</span>
-            <span class="spec-val">${prod.dimensions.width} cm</span>
-          </div>
-          <div class="spec-item">
-            <span class="spec-label">Sâu</span>
-            <span class="spec-val">${prod.dimensions.depth} cm</span>
-          </div>
+      <div class="card-body">
+        <div class="card-cat">${prod.category}</div>
+        <div class="card-name">${prod.name}</div>
+        <div class="card-specs">
+          <div class="spec"><span class="spec-label">Cao</span><span class="spec-val">${prod.dimensions?.height ?? '?'}</span></div>
+          <div class="spec"><span class="spec-label">Ngang</span><span class="spec-val">${prod.dimensions?.width ?? '?'}</span></div>
+          <div class="spec"><span class="spec-label">Sâu</span><span class="spec-val">${prod.dimensions?.depth ?? '?'}</span></div>
         </div>
-
-        <div class="product-actions">
-          <button type="button" class="btn btn-primary btn-ar-direct" data-id="${prod.id}">
-            <i class="ri-camera-fill"></i> Bật Camera AR Trong Phòng
+        <div class="card-actions">
+          <button class="btn-ar btn-ar-launch">
+            <i class="bi bi-camera-fill"></i> Thử AR Trong Phòng
           </button>
-          <button type="button" class="btn btn-glass btn-3d-view" data-id="${prod.id}">
-            <i class="ri-box-3-line"></i> Xem 3D 360°
+          <button class="btn-3d btn-3d-view">
+            <i class="bi bi-box-seam"></i> Xem 3D 360°
           </button>
         </div>
-      </div>
-    `;
+      </div>`;
 
-    // Direct Camera Button Handler (instant touch trigger for iOS Safari)
-    const btnDirectCamera = card.querySelector('.btn-ar-direct');
-    
-    const triggerCamera = () => {
-      if (state.isCameraOpening) return;
-      state.isCameraOpening = true;
-      requestCameraAndOpenModal(prod);
-      setTimeout(() => { state.isCameraOpening = false; }, 1000);
-    };
+    // Critical fix: attach events directly in closure (avoids selector bugs)
+    card.querySelector('.btn-ar-launch').addEventListener('click', e => {
+      e.stopPropagation();
+      openViewer(prod);
+    });
+    card.querySelector('.btn-3d-view').addEventListener('click', e => {
+      e.stopPropagation();
+      openViewer(prod);
+    });
 
-    btnDirectCamera.addEventListener('click', triggerCamera);
-
-    // 3D View Button Handler
-    const btn3DView = card.querySelector('.btn-3d-view');
-    btn3DView.addEventListener('click', () => openARViewer(prod));
-
-    elements.productsGrid.appendChild(card);
+    grid.appendChild(card);
   });
 }
 
-// Request Camera Stream synchronously in user click gesture context
-function requestCameraAndOpenModal(product) {
-  if (!product) return;
-  state.selectedProduct = product;
+// ─── Path encoder (handles Vietnamese chars + spaces) ───
+function encodePath(path) {
+  if (!path) return '';
+  // Encode each segment individually, preserve slashes
+  return path.split('/').map(seg => encodeURIComponent(seg)).join('/');
+}
 
-  // Check getUserMedia support
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert('Trình duyệt của bạn không hỗ trợ camera. Vui lòng thử lại trên trình duyệt Safari (iOS) hoặc Chrome (Android).');
-    return;
+// ─── Open viewer modal ───────────────────────────
+async function openViewer(product) {
+  state.selectedProduct = product;
+  const mv = $('modelViewer');
+  const isWall = product.placement === 'wall';
+
+  // Update header
+  $('arModalTitle').textContent = product.name;
+  $('scaleBadge').innerHTML = `
+    <i class="bi bi-rulers"></i>
+    ${product.dimensions?.height}H × ${product.dimensions?.width}W × ${product.dimensions?.depth}D cm`;
+
+  // Placement instruction
+  const tip = $('scanTip');
+  tip.className = `scan-tip ${isWall ? 'wall' : 'floor'}`;
+  $('scanTipText').innerHTML = isWall
+    ? `<strong>Máy lạnh treo tường</strong> — Hướng camera vào <strong>TƯỜNG</strong>, di chuyển chậm để quét, rồi bấm <strong>Bật AR</strong>`
+    : `Hướng camera xuống <strong>SÀN nhà</strong>, di chuyển chậm để quét, rồi bấm <strong>Bật AR</strong>`;
+
+  // AR placement
+  mv.setAttribute('ar-placement', isWall ? 'wall' : 'floor');
+
+  // WALL ORIENTATION FIX:
+  // GLBs are modelled with Y=up (floor placement). With ar-placement="wall",
+  // model-viewer makes local-Y perpendicular to wall — so the AC's height
+  // sticks OUT from wall instead of standing upright.
+  // Fix: pre-rotate -90° around X so the model's depth (Z) becomes wall-normal (Y).
+  if (isWall) {
+    mv.setAttribute('orientation', '-90deg 0deg 0deg');
+  } else {
+    mv.removeAttribute('orientation');
   }
 
-  // Request camera IMMEDIATELY in user gesture call stack
-  navigator.mediaDevices.getUserMedia({
-    video: { facingMode: { ideal: 'environment' } },
-    audio: false
-  })
-  .then(stream => {
-    state.cameraStream = stream;
-    elements.cameraVideo.srcObject = stream;
-    elements.cameraVideo.setAttribute('playsinline', 'true');
-    elements.cameraVideo.setAttribute('webkit-playsinline', 'true');
-    elements.cameraVideo.play();
+  // Show modal + loading
+  $('arModal').classList.add('active');
+  showLoading(true, product.glbSizeMB);
 
-    // Show modal and start 3D canvas
-    elements.liveCameraTitle.textContent = `Camera WebAR - ${product.name}`;
-    elements.liveCameraModal.classList.add('active');
+  // CRITICAL FIX: properly encode path with Vietnamese chars/spaces
+  mv.removeAttribute('src');
+  if (product.glbFile) {
+    mv.setAttribute('src', encodePath(product.glbFile));
+  } else {
+    try {
+      const url = await generateFallbackGLB(product);
+      mv.setAttribute('src', url);
+    } catch (err) {
+      console.error('Fallback GLB error:', err);
+      showLoading(false);
+    }
+  }
+}
 
-    state.touchState.posX = 0;
-    state.touchState.posY = -0.2;
-    state.touchState.rotationY = 0;
+// ─── model-viewer events ─────────────────────────
+function setupModelViewerEvents() {
+  const mv = $('modelViewer');
 
-    initThreeJSCameraCanvas(product);
-  })
-  .catch(err => {
-    console.error('Camera permission error:', err);
-    alert('Vui lòng cấp quyền mở Camera trong cài đặt Safari/Chrome trên điện thoại:\n\n1. Bấm vào biểu tượng Cài đặt / Quyền riêng tư ở thanh địa chỉ.\n2. Chọn Camera -> Cho phép (Allow).\n3. Tải lại trang và thử lại!');
+  // Hide loading when model is ready
+  mv.addEventListener('load', () => {
+    showLoading(false);
+    const arBtn = $('arBtn');
+    if (!mv.canActivateAR) {
+      if (arBtn) arBtn.style.display = 'none';
+      $('arUnavail').style.display = 'flex';
+    } else {
+      if (arBtn) arBtn.style.display = 'flex';
+      $('arUnavail').style.display = 'none';
+    }
+  });
+
+  // If model errors (wrong path, CORS, etc.)
+  mv.addEventListener('error', e => {
+    console.error('model-viewer error:', e);
+    showLoading(false);
+    $('arUnavail').style.display = 'flex';
+    $('arUnavail').innerHTML = `<i class="bi bi-exclamation-triangle"></i> Không tải được mô hình 3D. File GLB có thể đang bị lỗi đường dẫn.`;
+  });
+
+  // AR session feedback
+  mv.addEventListener('ar-status', e => {
+    const arBtn = $('arBtn');
+    if (e.detail.status === 'session-started') {
+      if (arBtn) arBtn.innerHTML = `<i class="bi bi-record-circle-fill"></i> AR đang chạy...`;
+    } else if (e.detail.status === 'not-presenting') {
+      if (arBtn) arBtn.innerHTML = `<i class="bi bi-camera-fill"></i> Bật AR — Đặt vào phòng`;
+    } else if (e.detail.status === 'failed') {
+      alert('AR không khởi động được.\n\n• Cấp quyền Camera cho trình duyệt\n• Dùng Safari iOS 15+ hoặc Chrome Android\n• Truy cập qua HTTPS (link Cloudflare đang dùng ✓)');
+      if (arBtn) arBtn.innerHTML = `<i class="bi bi-camera-fill"></i> Bật AR — Đặt vào phòng`;
+    }
   });
 }
 
-// Setup Event Listeners
-function setupEventListeners() {
-  // Category Chips Filter
-  elements.categoryChips.forEach(chip => {
+function showLoading(show, sizeMB = null) {
+  const el = $('mvLoading');
+  el.style.display = show ? 'flex' : 'none';
+  if (show && sizeMB) {
+    el.innerHTML = `
+      <div class="mv-spinner"></div>
+      <span>Đang tải mô hình 3D...</span>
+      <span class="load-size-warn"><i class="bi bi-exclamation-triangle-fill"></i> File nặng ~${sizeMB}MB — cần WiFi, có thể mất 30-60 giây</span>`;
+  } else if (show) {
+    el.innerHTML = `<div class="mv-spinner"></div><span>Đang tải mô hình 3D...</span>`;
+  }
+}
+
+// ─── Category filter ─────────────────────────────
+function setupFilters() {
+  document.querySelectorAll('.cat-chip').forEach(chip => {
     chip.addEventListener('click', () => {
-      elements.categoryChips.forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
-
       const cat = chip.dataset.category;
-      state.activeCategory = cat;
-
-      if (cat === 'all') {
-        state.filteredProducts = [...state.products];
-      } else {
-        state.filteredProducts = state.products.filter(p => p.categoryKey === cat);
-      }
+      state.filteredProducts = cat === 'all'
+        ? [...state.products]
+        : state.products.filter(p => p.categoryKey === cat);
       renderProducts();
     });
   });
-
-  // Modal Closers
-  elements.arModalClose.addEventListener('click', closeARModal);
-  elements.uploadModalClose.addEventListener('click', closeUploadModal);
-  elements.btnOpenUpload.addEventListener('click', openUploadModal);
-
-  // Close modals on background overlay click
-  elements.arModal.addEventListener('click', e => {
-    if (e.target === elements.arModal) closeARModal();
-  });
-  elements.uploadModal.addEventListener('click', e => {
-    if (e.target === elements.uploadModal) closeUploadModal();
-  });
-
-  // Add Product Form Submission
-  elements.addProductForm.addEventListener('submit', handleAddProductSubmit);
-
-  // Modal Launch Camera Button
-  if (elements.btnModalLaunchCamera) {
-    elements.btnModalLaunchCamera.addEventListener('click', () => {
-      closeARModal();
-      if (state.selectedProduct) {
-        requestCameraAndOpenModal(state.selectedProduct);
-      }
-    });
-  }
-
-  // Live Camera WebAR closers and photo capture
-  elements.btnCloseLiveCamera.addEventListener('click', closeLiveCameraModal);
-  elements.btnCapturePhoto.addEventListener('click', capturePhoto);
-
-  // Touch gesture listeners on camera canvas
-  setupCanvasTouchGestures();
 }
 
-// Create Three.js Material with transparent PNG textures and solid appliance background
-function createProductMaterial(texture, baseColor = 0xffffff) {
-  if (!texture) {
-    return new THREE.MeshStandardMaterial({
-      color: 0x1e293b,
-      metalness: 0.5,
-      roughness: 0.3
-    });
-  }
-  return new THREE.MeshStandardMaterial({
-    map: texture,
-    transparent: true,
-    alphaTest: 0.1,
-    color: baseColor,
-    metalness: 0.2,
-    roughness: 0.3
+// ─── Modal open/close ────────────────────────────
+function setupModals() {
+  // AR modal
+  $('arModalClose').addEventListener('click', closeARModal);
+  $('arModal').addEventListener('click', e => {
+    if (e.target === $('arModal')) closeARModal();
   });
-}
 
-// Generate 1:1 Scale Procedural 3D Model with Multi-Angle Textures
-async function generate3DModel(product) {
-  if (state.glbCache.has(product.id)) {
-    return state.glbCache.get(product.id);
-  }
-
-  return new Promise((resolve, reject) => {
-    const W = product.dimensions.width / 100;
-    const H = product.dimensions.height / 100;
-    const D = product.dimensions.depth / 100;
-
-    const geometry = new THREE.BoxGeometry(W, H, D);
-    const textureLoader = new THREE.TextureLoader();
-
-    const imgs = product.images;
-    const frontTex = imgs.front ? textureLoader.load(encodeURI(imgs.front)) : null;
-    const backTex = imgs.back ? textureLoader.load(encodeURI(imgs.back)) : null;
-    const leftTex = imgs.left ? textureLoader.load(encodeURI(imgs.left)) : null;
-    const rightTex = imgs.right ? textureLoader.load(encodeURI(imgs.right)) : null;
-    const topTex = imgs.top ? textureLoader.load(encodeURI(imgs.top)) : null;
-
-    const materials = [
-      createProductMaterial(rightTex), // Right (+X)
-      createProductMaterial(leftTex),  // Left (-X)
-      createProductMaterial(topTex),   // Top (+Y)
-      createProductMaterial(null),     // Bottom (-Y)
-      createProductMaterial(frontTex), // Front (+Z)
-      createProductMaterial(backTex)   // Back (-Z)
-    ];
-
-    const mesh = new THREE.Mesh(geometry, materials);
-    mesh.position.set(0, H / 2, 0);
-
-    const scene = new THREE.Scene();
-    scene.add(mesh);
-
-    const light = new THREE.DirectionalLight(0xffffff, 1.2);
-    light.position.set(2, 4, 3);
-    scene.add(light);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
-
-    const exporter = new THREE.GLTFExporter();
-    exporter.parse(
-      scene,
-      function (gltf) {
-        const blob = new Blob([gltf], { type: 'model/gltf-binary' });
-        const blobUrl = URL.createObjectURL(blob);
-        state.glbCache.set(product.id, blobUrl);
-        resolve(blobUrl);
-      },
-      function (error) {
-        console.error('Error generating GLB model:', error);
-        reject(error);
-      },
-      { binary: true }
-    );
+  // Upload modal
+  $('btnOpenUpload').addEventListener('click', () => $('uploadModal').classList.add('active'));
+  $('uploadModalClose').addEventListener('click', () => $('uploadModal').classList.remove('active'));
+  $('uploadModal').addEventListener('click', e => {
+    if (e.target === $('uploadModal')) $('uploadModal').classList.remove('active');
   });
+
+  // Form submit
+  $('addProductForm').addEventListener('submit', handleAddProduct);
 }
 
-// Open AR Viewport Modal
-async function openARViewer(product) {
-  state.selectedProduct = product;
-  elements.arModalTitle.textContent = `${product.name} (Tỉ lệ thực 1:1)`;
-  elements.scaleBadge.innerHTML = `<i class="ri-ruler-line"></i> ${product.dimensions.height}H × ${product.dimensions.width}W × ${product.dimensions.depth}D cm`;
-
-  elements.arModal.classList.add('active');
-
-  try {
-    const glbUrl = await generate3DModel(product);
-    elements.modelViewer.setAttribute('src', glbUrl);
-  } catch (err) {
-    console.error('Could not generate 3D model:', err);
-  }
-}
-
-// Close AR Modal
 function closeARModal() {
-  elements.arModal.classList.remove('active');
-  elements.modelViewer.removeAttribute('src');
+  $('arModal').classList.remove('active');
+  const mv = $('modelViewer');
+  mv.removeAttribute('src');
+  mv.removeAttribute('ar-placement');
+  showLoading(false);
+  const arBtn = $('arBtn');
+  if (arBtn) arBtn.innerHTML = `<i class="bi bi-camera-fill"></i> Bật AR — Đặt vào phòng`;
 }
 
-// -------------------------------------------------------------
-// Three.js Overlaid 3D Canvas Engine
-// -------------------------------------------------------------
-function initThreeJSCameraCanvas(product) {
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-
-  state.threeScene = new THREE.Scene();
-  state.threeCamera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
-  state.threeCamera.position.set(0, 1.2, 2.5);
-  state.threeCamera.lookAt(0, 0, 0);
-
-  state.threeRenderer = new THREE.WebGLRenderer({
-    canvas: elements.cameraCanvas,
-    alpha: true,
-    antialias: true
-  });
-  state.threeRenderer.setSize(width, height);
-  state.threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-  const light = new THREE.DirectionalLight(0xffffff, 1.4);
-  light.position.set(3, 5, 4);
-  state.threeScene.add(light);
-  state.threeScene.add(new THREE.AmbientLight(0xffffff, 0.9));
-
-  const W = product.dimensions.width / 100;
-  const H = product.dimensions.height / 100;
-  const D = product.dimensions.depth / 100;
-
-  // Solid Inner Chassis Box (Realistic Metallic Body)
-  const chassisGeom = new THREE.BoxGeometry(W * 0.99, H * 0.99, D * 0.99);
-  const chassisMat = new THREE.MeshStandardMaterial({
-    color: 0x1e293b,
-    metalness: 0.6,
-    roughness: 0.2
-  });
-  const chassisMesh = new THREE.Mesh(chassisGeom, chassisMat);
-
-  // Outer Textured Box with Transparent Processed PNGs
-  const geometry = new THREE.BoxGeometry(W, H, D);
-  const textureLoader = new THREE.TextureLoader();
-
-  const imgs = product.images;
-  const frontTex = imgs.front ? textureLoader.load(encodeURI(imgs.front)) : null;
-  const backTex = imgs.back ? textureLoader.load(encodeURI(imgs.back)) : null;
-  const leftTex = imgs.left ? textureLoader.load(encodeURI(imgs.left)) : null;
-  const rightTex = imgs.right ? textureLoader.load(encodeURI(imgs.right)) : null;
-  const topTex = imgs.top ? textureLoader.load(encodeURI(imgs.top)) : null;
-
-  const materials = [
-    createProductMaterial(rightTex), // Right (+X)
-    createProductMaterial(leftTex),  // Left (-X)
-    createProductMaterial(topTex),   // Top (+Y)
-    createProductMaterial(null),     // Bottom (-Y)
-    createProductMaterial(frontTex), // Front (+Z)
-    createProductMaterial(backTex)   // Back (-Z)
-  ];
-
-  const outerMesh = new THREE.Mesh(geometry, materials);
-
-  // Group inner chassis + outer textured mesh
-  state.productMesh = new THREE.Group();
-  state.productMesh.add(chassisMesh);
-  state.productMesh.add(outerMesh);
-
-  state.productMesh.position.set(0, -0.2, 0);
-  state.threeScene.add(state.productMesh);
-
-  function animate() {
-    if (!elements.liveCameraModal.classList.contains('active')) return;
-    state.animFrameId = requestAnimationFrame(animate);
-
-    if (state.productMesh) {
-      state.productMesh.rotation.y = state.touchState.rotationY;
-      state.productMesh.position.x = state.touchState.posX;
-      state.productMesh.position.y = state.touchState.posY;
-    }
-
-    state.threeRenderer.render(state.threeScene, state.threeCamera);
-  }
-  animate();
-}
-
-// Touch Gestures for Moving and Rotating 3D Product over Live Camera
-function setupCanvasTouchGestures() {
-  const canvas = elements.cameraCanvas;
-
-  canvas.addEventListener('touchstart', e => {
-    if (e.touches.length === 1) {
-      state.touchState.isDragging = true;
-      state.touchState.lastX = e.touches[0].clientX;
-      state.touchState.lastY = e.touches[0].clientY;
-    }
-  }, { passive: true });
-
-  canvas.addEventListener('touchmove', e => {
-    if (!state.touchState.isDragging || e.touches.length !== 1) return;
-
-    const deltaX = e.touches[0].clientX - state.touchState.lastX;
-    const deltaY = e.touches[0].clientY - state.touchState.lastY;
-
-    state.touchState.rotationY += deltaX * 0.01;
-    state.touchState.posY -= deltaY * 0.003;
-
-    state.touchState.lastX = e.touches[0].clientX;
-    state.touchState.lastY = e.touches[0].clientY;
-  }, { passive: true });
-
-  canvas.addEventListener('touchend', () => {
-    state.touchState.isDragging = false;
-  });
-}
-
-// Close Live Camera Modal
-function closeLiveCameraModal() {
-  elements.liveCameraModal.classList.remove('active');
-  if (state.animFrameId) {
-    cancelAnimationFrame(state.animFrameId);
-    state.animFrameId = null;
-  }
-  if (state.cameraStream) {
-    state.cameraStream.getTracks().forEach(track => track.stop());
-    state.cameraStream = null;
-  }
-}
-
-// Capture Photo inside Camera Room View
-function capturePhoto() {
-  const canvas = document.createElement('canvas');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  const ctx = canvas.getContext('2d');
-
-  ctx.drawImage(elements.cameraVideo, 0, 0, canvas.width, canvas.height);
-  ctx.drawImage(elements.cameraCanvas, 0, 0, canvas.width, canvas.height);
-
-  const link = document.createElement('a');
-  link.download = `AR_Product_${Date.now()}.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
-}
-
-// Open / Close Upload Modal
-function openUploadModal() {
-  elements.uploadModal.classList.add('active');
-}
-
-function closeUploadModal() {
-  elements.uploadModal.classList.remove('active');
-}
-
-// Handle Add Product Submit
-function handleAddProductSubmit(e) {
+// ─── Add product form ────────────────────────────
+function handleAddProduct(e) {
   e.preventDefault();
-  const form = elements.addProductForm;
-
-  const name = form.prodName.value.trim();
-  const category = form.prodCategory.value;
-  const height = parseFloat(form.prodHeight.value);
-  const width = parseFloat(form.prodWidth.value);
-  const depth = parseFloat(form.prodDepth.value);
-  const placement = form.prodPlacement.value;
+  const f = $('addProductForm');
+  const name = $('prodName').value.trim();
+  const height = parseFloat($('prodHeight').value);
+  const width  = parseFloat($('prodWidth').value);
+  const depth  = parseFloat($('prodDepth').value);
+  const placement = $('prodPlacement').value;
+  const category  = $('prodCategory').value;
 
   if (!name || !height || !width || !depth) {
-    alert('Vui lòng nhập đầy đủ tên và kích thước (Cao, Ngang, Sâu)!');
+    alert('Vui lòng nhập đầy đủ tên và kích thước!');
     return;
   }
 
-  const frontFile = form.imgFront.files[0];
-  const frontUrl = frontFile ? URL.createObjectURL(frontFile) : 'product info/Tủ lạnh/front_processed.png';
-  const leftFile = form.imgLeft.files[0];
-  const leftUrl = leftFile ? URL.createObjectURL(leftFile) : frontUrl;
-  const rightFile = form.imgRight.files[0];
-  const rightUrl = rightFile ? URL.createObjectURL(rightFile) : frontUrl;
-  const backFile = form.imgBack.files[0];
-  const backUrl = backFile ? URL.createObjectURL(backFile) : frontUrl;
+  const frontFile = $('imgFront').files[0];
+  const frontUrl  = frontFile ? URL.createObjectURL(frontFile) : 'product info/Tủ lạnh/front_processed.png';
 
-  const categoryMap = {
-    'Tủ lạnh': 'refrigerator',
-    'Máy giặt': 'washer',
-    'TV OLED': 'tv',
-    'Máy lạnh': 'ac'
+  const catMap = {
+    'Tủ lạnh': 'refrigerator', 'Máy giặt': 'washer',
+    'TV OLED': 'tv', 'Máy lạnh': 'ac', 'Máy lọc KK': 'purifier'
   };
 
-  const newProduct = {
+  const prod = {
     id: `custom-${Date.now()}`,
-    name,
-    category,
-    categoryKey: categoryMap[category] || 'other',
+    name, category,
+    categoryKey: catMap[category] || 'other',
     placement,
     dimensions: { height, width, depth, unit: 'cm' },
-    images: {
-      front: frontUrl,
-      left: leftUrl,
-      right: rightUrl,
-      back: backUrl
-    },
-    description: 'Sản phẩm tạo mới từ bảng quản trị.'
+    images: { front: frontUrl },
+    description: 'Sản phẩm tạo mới.'
   };
 
-  state.products.unshift(newProduct);
+  state.products.unshift(prod);
   state.filteredProducts = [...state.products];
   renderProducts();
+  $('uploadModal').classList.remove('active');
+  f.reset();
+  openViewer(prod);
+}
 
-  closeUploadModal();
-  form.reset();
+// ─── Fallback box GLB (no .glb file, uses Three.js export) ──
+function makeMat(tex) {
+  return tex
+    ? new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: .1, metalness: .2, roughness: .3 })
+    : new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: .5, roughness: .3 });
+}
 
-  requestCameraAndOpenModal(newProduct);
+async function generateFallbackGLB(product) {
+  if (typeof THREE === 'undefined' || !THREE.GLTFExporter) throw new Error('Three.js not ready');
+
+  return new Promise((resolve, reject) => {
+    const W = (product.dimensions?.width  || 60) / 100;
+    const H = (product.dimensions?.height || 100) / 100;
+    const D = (product.dimensions?.depth  || 50) / 100;
+
+    const loader = new THREE.TextureLoader();
+    const imgs = product.images || {};
+    const load = p => p ? loader.load(encodePath(p)) : null;
+
+    const geo = new THREE.BoxGeometry(W, H, D);
+    const mats = [
+      makeMat(load(imgs.right)), makeMat(load(imgs.left)),
+      makeMat(load(imgs.top)),   makeMat(null),
+      makeMat(load(imgs.front)), makeMat(load(imgs.back)),
+    ];
+
+    const mesh = new THREE.Mesh(geo, mats);
+    mesh.position.y = H / 2;
+    const scene = new THREE.Scene();
+    scene.add(mesh);
+    scene.add(new THREE.DirectionalLight(0xffffff, 1.2));
+    scene.add(new THREE.AmbientLight(0xffffff, .8));
+
+    new THREE.GLTFExporter().parse(
+      scene,
+      glb => resolve(URL.createObjectURL(new Blob([glb], { type: 'model/gltf-binary' }))),
+      reject,
+      { binary: true }
+    );
+  });
 }

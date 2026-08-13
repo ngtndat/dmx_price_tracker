@@ -89,10 +89,11 @@
   },
   {
     "id": "air-conditioner-lg",
-    "name": "Máy lạnh / Điều hòa Inverter Treo tường",
+    "name": "Máy lạnh Inverter Treo tường LG IDC12M2",
     "category": "Máy lạnh",
     "categoryKey": "ac",
     "placement": "wall",
+    "glbFile": "product info/máy lạnh/IDC12M2.glb",
     "dimensions": {
       "height": 30.7,
       "width": 79.9,
@@ -106,6 +107,23 @@
       "left": "product info/máy lạnh/left_processed.png",
       "right": "product info/máy lạnh/right_processed.png"
     },
-    "description": "Máy lạnh treo tường công nghệ Inverter tiết kiệm điện, thiết kế bo cong thanh lịch."
+    "description": "Máy lạnh treo tường công nghệ Inverter tiết kiệm điện, thiết kế bo cong thanh lịch. Model 3D chính xác tỉ lệ 1:1."
+  },
+  {
+    "id": "air-purifier-lg",
+    "name": "Máy lọc không khí LG PuriCare MD19GQGE0",
+    "category": "Máy lọc KK",
+    "categoryKey": "purifier",
+    "placement": "floor",
+    "glbFile": "product info/Máy hút ẩm/MD19GQGE0.glb",
+    "glbSizeMB": 7,
+    "dimensions": {
+      "height": 59.6,
+      "width": 38.6,
+      "depth": 38.6,
+      "unit": "cm"
+    },
+    "images": {},
+    "description": "Máy lọc không khí LG PuriCare 360° với bộ lọc HEPA 13, làm sạch không khí theo chu kỳ. File 3D GLB nặng ~66MB, cần WiFi để tải nhanh."
   }
 ]
