@@ -4,9 +4,10 @@
     "name": "Smart TV LG QNED evo AI 65 Inch 65QNED9MASA",
     "category": "TV QNED",
     "categoryKey": "tv",
+    "status": "ready",
     "placement": "floor",
     "glbFile": "models/tv_65qned_lg.glb",
-    "glbSizeMB": 8.5,
+    "glbSizeMB": 2.1,
     "dimensions": {
       "height": 91.0,
       "width": 145.6,
@@ -23,6 +24,7 @@
     "name": "Máy lạnh Inverter Treo tường LG IDC12M2",
     "category": "Máy lạnh",
     "categoryKey": "ac",
+    "status": "ready",
     "placement": "wall",
     "glbFile": "models/ac_lg.glb",
     "glbSizeMB": 2.4,
@@ -42,6 +44,7 @@
     "name": "Máy lọc không khí LG PuriCare MD19GQGE0",
     "category": "Máy lọc KK",
     "categoryKey": "purifier",
+    "status": "ready",
     "placement": "floor",
     "glbFile": "models/purifier_lg.glb",
     "glbSizeMB": 6.1,
@@ -59,6 +62,7 @@
     "name": "Tủ lạnh LG Inverter Multi-Door",
     "category": "Tủ lạnh",
     "categoryKey": "refrigerator",
+    "status": "coming_soon",
     "placement": "floor",
     "dimensions": {
       "height": 178.7,
@@ -76,6 +80,7 @@
     "name": "Tháp giặt sấy LG WashTower",
     "category": "Máy giặt",
     "categoryKey": "washer",
+    "status": "coming_soon",
     "placement": "floor",
     "dimensions": {
       "height": 165.5,

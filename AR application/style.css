@@ -354,6 +354,27 @@ body {
   gap: .5rem;
   margin-top: auto;
 }
+.card-coming-soon {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: var(--radius-sm);
+  padding: .75rem .8rem;
+  font-size: .82rem;
+  font-weight: 600;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  text-align: center;
+  margin-top: auto;
+}
+.card-coming-soon i { font-size: 1rem; color: #94a3b8; }
+.card-placement-badge.coming-soon {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #e2e8f0;
+}
 .btn-ar {
   background: var(--red);
   color: var(--white);

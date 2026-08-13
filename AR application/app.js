@@ -58,6 +58,7 @@ function renderProducts() {
     const isWall = prod.placement === 'wall';
     const hasGLB = !!prod.glbFile;
     const sizeMB = prod.glbSizeMB || null;
+    const isComingSoon = prod.status === 'coming_soon';
 
     // Thumbnail: image or themed placeholder
     const thumbHtml = thumb
@@ -65,11 +66,25 @@ function renderProducts() {
          <div class="thumb-placeholder" style="display:none"><i class="bi bi-box-seam"></i></div>`
       : `<div class="thumb-placeholder"><i class="bi bi-${isWall ? 'wind' : 'tornado'}"></i></div>`;
 
+    // Action buttons vs Coming Soon status
+    const actionHtml = isComingSoon
+      ? `<div class="card-coming-soon">
+           <i class="bi bi-clock-history"></i> Sản phẩm đang phát triển thêm mô hình 3D
+         </div>`
+      : `<div class="card-actions">
+           <button class="btn-ar btn-ar-launch">
+             <i class="bi bi-camera-fill"></i> Thử AR Trong Phòng
+           </button>
+           <button class="btn-3d btn-3d-view">
+             <i class="bi bi-box-seam"></i> Xem 3D 360°
+           </button>
+         </div>`;
+
     card.innerHTML = `
       <div class="card-thumb">
-        <span class="card-placement-badge ${isWall ? 'wall' : ''}">
-          <i class="bi bi-${isWall ? 'layout-wtf' : 'grid'}"></i>
-          ${isWall ? 'Treo tường (Wall)' : 'Đặt sàn (Floor)'}
+        <span class="card-placement-badge ${isComingSoon ? 'coming-soon' : (isWall ? 'wall' : '')}">
+          <i class="bi bi-${isComingSoon ? 'hourglass-split' : (isWall ? 'layout-wtf' : 'grid')}"></i>
+          ${isComingSoon ? 'Sắp ra mắt' : (isWall ? 'Treo tường (Wall)' : 'Đặt sàn (Floor)')}
         </span>
         ${hasGLB ? `<span class="card-glb-badge"><i class="bi bi-box"></i> 3D GLB ${sizeMB ? `(${sizeMB}MB)` : ''}</span>` : ''}
         ${thumbHtml}
@@ -82,24 +97,19 @@ function renderProducts() {
           <div class="spec"><span class="spec-label">Ngang</span><span class="spec-val">${prod.dimensions?.width ?? '?'} cm</span></div>
           <div class="spec"><span class="spec-label">Sâu</span><span class="spec-val">${prod.dimensions?.depth ?? '?'} cm</span></div>
         </div>
-        <div class="card-actions">
-          <button class="btn-ar btn-ar-launch">
-            <i class="bi bi-camera-fill"></i> Thử AR Trong Phòng
-          </button>
-          <button class="btn-3d btn-3d-view">
-            <i class="bi bi-box-seam"></i> Xem 3D 360°
-          </button>
-        </div>
+        ${actionHtml}
       </div>`;
 
-    card.querySelector('.btn-ar-launch').addEventListener('click', e => {
-      e.stopPropagation();
-      openViewer(prod);
-    });
-    card.querySelector('.btn-3d-view').addEventListener('click', e => {
-      e.stopPropagation();
-      openViewer(prod);
-    });
+    if (!isComingSoon) {
+      card.querySelector('.btn-ar-launch').addEventListener('click', e => {
+        e.stopPropagation();
+        openViewer(prod);
+      });
+      card.querySelector('.btn-3d-view').addEventListener('click', e => {
+        e.stopPropagation();
+        openViewer(prod);
+      });
+    }
 
     grid.appendChild(card);
   });
