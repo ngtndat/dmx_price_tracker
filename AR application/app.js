@@ -1,9 +1,9 @@
 /**
- * LG AR SpaceVision — app.js v7
+ * LG AR SpaceVision — app.js v8
  * High-performance mobile AR & 3D WebViewer
- * - Zero-lock loading state (handles cached models, progress 100%, and quick switches)
- * - Full-card tap support for seamless mobile interaction
- * - Cache-busted products.json fetching
+ * - Native ARKit (iOS Safari) & ARCore (Android Chrome) via <model-viewer>
+ * - Clean ASCII asset paths for cross-platform reliability
+ * - Real-time progress bar with percent indicator
  * - Wall & Floor intelligent surface detection
  */
 
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupModelViewerEvents();
 });
 
-// ─── Load products.json (with cache buster) ──────
+// ─── Load products.json ──────────────────────────
 async function loadProducts() {
   try {
     const r = await fetch('products.json?v=' + Date.now());
@@ -100,7 +100,6 @@ function renderProducts() {
         ${actionHtml}
       </div>`;
 
-    // Card click behavior
     if (!isComingSoon) {
       card.querySelector('.card-thumb').addEventListener('click', () => openViewer(prod));
       card.querySelector('.card-name').addEventListener('click', () => openViewer(prod));
@@ -141,28 +140,18 @@ async function openViewer(product) {
   mv.setAttribute('ar-placement', isWall ? 'wall' : 'floor');
   mv.removeAttribute('orientation');
 
-  // Open modal
+  // Open modal and show initial loading state
   $('arModal').classList.add('active');
   $('arUnavail').style.display = 'none';
+  showLoading(true, 0);
 
   // Set 3D model source
-  const targetSrc = product.glbFile || null;
-  if (targetSrc) {
-    if (mv.getAttribute('src') === targetSrc && mv.loaded) {
-      showLoading(false);
-    } else {
-      showLoading(true, 0);
-      mv.setAttribute('src', targetSrc);
-      // Auto-dismiss if model is already cached/loaded
-      setTimeout(() => {
-        if (mv.loaded) showLoading(false);
-      }, 600);
-    }
+  if (product.glbFile) {
+    mv.src = product.glbFile;
   } else {
-    showLoading(true, 0);
     try {
       const url = await generateFallbackGLB(product);
-      mv.setAttribute('src', url);
+      mv.src = url;
     } catch (err) {
       console.error('Fallback GLB error:', err);
       showLoading(false);
@@ -181,9 +170,6 @@ function setupModelViewerEvents() {
   mv.addEventListener('progress', e => {
     const progress = Math.round((e.detail.totalProgress || 0) * 100);
     showLoading(true, progress);
-    if (progress >= 100) {
-      setTimeout(() => showLoading(false), 200);
-    }
   });
 
   // Model successfully loaded and ready for rendering
@@ -271,6 +257,11 @@ function setupModals() {
 
 function closeARModal() {
   $('arModal').classList.remove('active');
+  const mv = $('modelViewer');
+  if (mv) {
+    mv.removeAttribute('src');
+    mv.removeAttribute('ar-placement');
+  }
   showLoading(false);
   const arBtn = $('arBtn');
   if (arBtn) arBtn.innerHTML = `<i class="bi bi-camera-fill"></i> Bật AR — Đặt vào phòng`;
