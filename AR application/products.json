@@ -42,8 +42,10 @@
     "name": "Smart TV LG QNED evo AI 65 Inch 65QNED9MASA",
     "category": "TV QNED",
     "categoryKey": "tv",
-    "status": "coming_soon",
+    "status": "ready",
     "placement": "floor",
+    "glbFile": "models/tv_65qned_lg.glb",
+    "glbSizeMB": 4.1,
     "dimensions": {
       "height": 91.0,
       "width": 145.6,
@@ -53,7 +55,7 @@
     "images": {
       "front": "images/products/tv_qned_front.jpg"
     },
-    "description": "Smart TV LG QNED evo AI MiniLED 4K 65 Inch. Đang tối ưu mô hình 3D cho thiết bị di động."
+    "description": "Smart TV LG QNED evo AI MiniLED 4K 65 Inch chính hãng trích xuất từ LG Việt Nam, chuẩn tỉ lệ 1:1."
   },
   {
     "id": "refrigerator-lg",
