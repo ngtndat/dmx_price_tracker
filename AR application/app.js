@@ -136,9 +136,13 @@ async function openViewer(product) {
     ? `<strong>Sản phẩm treo tường</strong>: Hướng camera vào <strong>BỨC TƯỜNG</strong>, di chuyển chậm để quét mặt phẳng, rồi bấm <strong>Bật AR</strong>.`
     : `<strong>Sản phẩm đặt sàn</strong>: Hướng camera xuống <strong>MẶT SÀN</strong>, di chuyển chậm để quét mặt phẳng, rồi bấm <strong>Bật AR</strong>.`;
 
-  // Set AR placement mode
+  // Set AR placement mode & wall orientation fix
   mv.setAttribute('ar-placement', isWall ? 'wall' : 'floor');
-  mv.removeAttribute('orientation');
+  if (isWall) {
+    mv.setAttribute('orientation', '-90deg 0deg 0deg');
+  } else {
+    mv.removeAttribute('orientation');
+  }
 
   // Open modal
   $('arModal').classList.add('active');
