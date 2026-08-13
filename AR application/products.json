@@ -1,25 +1,5 @@
 [
   {
-    "id": "tv-65qned9masa",
-    "name": "Smart TV LG QNED evo AI 65 Inch 65QNED9MASA",
-    "category": "TV QNED",
-    "categoryKey": "tv",
-    "status": "ready",
-    "placement": "floor",
-    "glbFile": "models/tv_65qned_lg.glb",
-    "glbSizeMB": 2.1,
-    "dimensions": {
-      "height": 91.0,
-      "width": 145.6,
-      "depth": 28.5,
-      "unit": "cm"
-    },
-    "images": {
-      "front": "images/products/tv_qned_front.jpg"
-    },
-    "description": "Smart TV LG QNED evo AI MiniLED 4K 65 Inch 2025. Model 3D chính hãng trích xuất từ LG Việt Nam, chuẩn tỉ lệ 1:1."
-  },
-  {
     "id": "air-conditioner-lg",
     "name": "Máy lạnh Inverter Treo tường LG IDC12M2",
     "category": "Máy lạnh",
@@ -56,6 +36,24 @@
     },
     "images": {},
     "description": "Máy lọc không khí LG PuriCare 360° với bộ lọc HEPA 13. Model 3D tối ưu tải nhanh cho AR di động, chuẩn tỉ lệ 1:1."
+  },
+  {
+    "id": "tv-65qned9masa",
+    "name": "Smart TV LG QNED evo AI 65 Inch 65QNED9MASA",
+    "category": "TV QNED",
+    "categoryKey": "tv",
+    "status": "coming_soon",
+    "placement": "floor",
+    "dimensions": {
+      "height": 91.0,
+      "width": 145.6,
+      "depth": 28.5,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "images/products/tv_qned_front.jpg"
+    },
+    "description": "Smart TV LG QNED evo AI MiniLED 4K 65 Inch. Đang tối ưu mô hình 3D cho thiết bị di động."
   },
   {
     "id": "refrigerator-lg",
