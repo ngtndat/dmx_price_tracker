@@ -1,9 +1,9 @@
 /**
- * LG AR SpaceVision — app.js v8
+ * LG AR SpaceVision — app.js v9
  * High-performance mobile AR & 3D WebViewer
- * - Native ARKit (iOS Safari) & ARCore (Android Chrome) via <model-viewer>
- * - Clean ASCII asset paths for cross-platform reliability
- * - Real-time progress bar with percent indicator
+ * - Auto-dismiss loading overlay once progress reaches 100% or model loads
+ * - Zero race-condition between progress and load events
+ * - 1:1 real-world scale baked models
  * - Wall & Floor intelligent surface detection
  */
 
@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupModelViewerEvents();
 });
 
-// ─── Load products.json ──────────────────────────
+// ─── Load products.json (with cache buster) ──────
 async function loadProducts() {
   try {
     const r = await fetch('products.json?v=' + Date.now());
@@ -140,15 +140,20 @@ async function openViewer(product) {
   mv.setAttribute('ar-placement', isWall ? 'wall' : 'floor');
   mv.removeAttribute('orientation');
 
-  // Open modal and show initial loading state
+  // Open modal
   $('arModal').classList.add('active');
   $('arUnavail').style.display = 'none';
-  showLoading(true, 0);
 
   // Set 3D model source
   if (product.glbFile) {
-    mv.src = product.glbFile;
+    if (mv.src && mv.src.endsWith(product.glbFile) && mv.loaded) {
+      showLoading(false);
+    } else {
+      showLoading(true, 0);
+      mv.src = product.glbFile;
+    }
   } else {
+    showLoading(true, 0);
     try {
       const url = await generateFallbackGLB(product);
       mv.src = url;
@@ -169,7 +174,12 @@ function setupModelViewerEvents() {
   // Real-time download progress tracking
   mv.addEventListener('progress', e => {
     const progress = Math.round((e.detail.totalProgress || 0) * 100);
-    showLoading(true, progress);
+    if (progress < 100 && !mv.loaded) {
+      showLoading(true, progress);
+    } else {
+      // Progress reached 100% -> immediately hide loading overlay
+      showLoading(false);
+    }
   });
 
   // Model successfully loaded and ready for rendering
