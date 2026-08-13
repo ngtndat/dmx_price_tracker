@@ -1,8 +1,10 @@
 /**
- * LG AR SpaceVision — app.js v4
- * Fix: encode GLB path properly before setting model-viewer src
- * Fix: loading overlay controlled by model-viewer events (not timeout)
- * Fix: wall/floor placement + scan instructions
+ * LG AR SpaceVision — app.js v5
+ * High-performance mobile AR & 3D WebViewer
+ * - Native ARKit (iOS Safari) & ARCore (Android Chrome) via <model-viewer>
+ * - Clean ASCII asset paths for cross-platform reliability
+ * - Real-time progress bar with percent indicator
+ * - Wall & Floor intelligent surface detection
  */
 
 const state = {
@@ -25,21 +27,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 async function loadProducts() {
   try {
     const r = await fetch('products.json');
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     state.products = await r.json();
     state.filteredProducts = [...state.products];
     renderProducts();
   } catch (e) {
     console.error('products.json load failed:', e);
+    const grid = $('productsGrid');
+    if (grid) {
+      grid.innerHTML = `<div class="empty-state"><i class="bi bi-exclamation-triangle"></i><p>Không thể tải danh sách sản phẩm: ${e.message}</p></div>`;
+    }
   }
 }
 
 // ─── Render cards ────────────────────────────────
 function renderProducts() {
   const grid = $('productsGrid');
+  if (!grid) return;
   grid.innerHTML = '';
 
   if (!state.filteredProducts.length) {
-    grid.innerHTML = `<div class="empty-state"><i class="bi bi-inbox"></i><p>Không tìm thấy sản phẩm.</p></div>`;
+    grid.innerHTML = `<div class="empty-state"><i class="bi bi-inbox"></i><p>Không tìm thấy sản phẩm phù hợp.</p></div>`;
     return;
   }
 
@@ -49,11 +57,11 @@ function renderProducts() {
     const thumb = prod.images?.front || Object.values(prod.images || {}).find(v => v) || null;
     const isWall = prod.placement === 'wall';
     const hasGLB = !!prod.glbFile;
-    const sizeMB  = prod.glbSizeMB || null;
+    const sizeMB = prod.glbSizeMB || null;
 
-    // Thumbnail: use image if available, else colored placeholder
+    // Thumbnail: image or themed placeholder
     const thumbHtml = thumb
-      ? `<img src="${encodePath(thumb)}" alt="${prod.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      ? `<img src="${thumb}" alt="${prod.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
          <div class="thumb-placeholder" style="display:none"><i class="bi bi-box-seam"></i></div>`
       : `<div class="thumb-placeholder"><i class="bi bi-${isWall ? 'wind' : 'tornado'}"></i></div>`;
 
@@ -61,18 +69,18 @@ function renderProducts() {
       <div class="card-thumb">
         <span class="card-placement-badge ${isWall ? 'wall' : ''}">
           <i class="bi bi-${isWall ? 'layout-wtf' : 'grid'}"></i>
-          ${isWall ? 'Treo tường' : 'Đặt sàn'}
+          ${isWall ? 'Treo tường (Wall)' : 'Đặt sàn (Floor)'}
         </span>
-        ${hasGLB ? `<span class="card-glb-badge"><i class="bi bi-box"></i> 3D ${sizeMB ? `~${sizeMB}MB` : 'GLB'}</span>` : ''}
+        ${hasGLB ? `<span class="card-glb-badge"><i class="bi bi-box"></i> 3D GLB ${sizeMB ? `(${sizeMB}MB)` : ''}</span>` : ''}
         ${thumbHtml}
       </div>
       <div class="card-body">
         <div class="card-cat">${prod.category}</div>
         <div class="card-name">${prod.name}</div>
         <div class="card-specs">
-          <div class="spec"><span class="spec-label">Cao</span><span class="spec-val">${prod.dimensions?.height ?? '?'}</span></div>
-          <div class="spec"><span class="spec-label">Ngang</span><span class="spec-val">${prod.dimensions?.width ?? '?'}</span></div>
-          <div class="spec"><span class="spec-label">Sâu</span><span class="spec-val">${prod.dimensions?.depth ?? '?'}</span></div>
+          <div class="spec"><span class="spec-label">Cao</span><span class="spec-val">${prod.dimensions?.height ?? '?'} cm</span></div>
+          <div class="spec"><span class="spec-label">Ngang</span><span class="spec-val">${prod.dimensions?.width ?? '?'} cm</span></div>
+          <div class="spec"><span class="spec-label">Sâu</span><span class="spec-val">${prod.dimensions?.depth ?? '?'} cm</span></div>
         </div>
         <div class="card-actions">
           <button class="btn-ar btn-ar-launch">
@@ -84,7 +92,6 @@ function renderProducts() {
         </div>
       </div>`;
 
-    // Critical fix: attach events directly in closure (avoids selector bugs)
     card.querySelector('.btn-ar-launch').addEventListener('click', e => {
       e.stopPropagation();
       openViewer(prod);
@@ -98,61 +105,46 @@ function renderProducts() {
   });
 }
 
-// ─── Path encoder (handles Vietnamese chars + spaces) ───
-function encodePath(path) {
-  if (!path) return '';
-  // Encode each segment individually, preserve slashes
-  return path.split('/').map(seg => encodeURIComponent(seg)).join('/');
-}
-
 // ─── Open viewer modal ───────────────────────────
 async function openViewer(product) {
   state.selectedProduct = product;
   const mv = $('modelViewer');
   const isWall = product.placement === 'wall';
 
-  // Update header
+  // Update header info
   $('arModalTitle').textContent = product.name;
   $('scaleBadge').innerHTML = `
     <i class="bi bi-rulers"></i>
-    ${product.dimensions?.height}H × ${product.dimensions?.width}W × ${product.dimensions?.depth}D cm`;
+    Kích thước chuẩn: ${product.dimensions?.height}H × ${product.dimensions?.width}W × ${product.dimensions?.depth}D cm (Tỉ lệ 1:1)`;
 
-  // Placement instruction
+  // Placement guidance
   const tip = $('scanTip');
   tip.className = `scan-tip ${isWall ? 'wall' : 'floor'}`;
   $('scanTipText').innerHTML = isWall
-    ? `<strong>Máy lạnh treo tường</strong> — Hướng camera vào <strong>TƯỜNG</strong>, di chuyển chậm để quét, rồi bấm <strong>Bật AR</strong>`
-    : `Hướng camera xuống <strong>SÀN nhà</strong>, di chuyển chậm để quét, rồi bấm <strong>Bật AR</strong>`;
+    ? `<strong>Sản phẩm treo tường</strong>: Hướng camera vào <strong>BỨC TƯỜNG</strong>, di chuyển chậm để quét mặt phẳng, rồi bấm <strong>Bật AR</strong>.`
+    : `<strong>Sản phẩm đặt sàn</strong>: Hướng camera xuống <strong>MẶT SÀN</strong>, di chuyển chậm để quét mặt phẳng, rồi bấm <strong>Bật AR</strong>.`;
 
-  // AR placement
+  // Set AR placement mode
   mv.setAttribute('ar-placement', isWall ? 'wall' : 'floor');
+  mv.removeAttribute('orientation');
 
-  // WALL ORIENTATION FIX:
-  // GLBs are modelled with Y=up (floor placement). With ar-placement="wall",
-  // model-viewer makes local-Y perpendicular to wall — so the AC's height
-  // sticks OUT from wall instead of standing upright.
-  // Fix: pre-rotate -90° around X so the model's depth (Z) becomes wall-normal (Y).
-  if (isWall) {
-    mv.setAttribute('orientation', '-90deg 0deg 0deg');
-  } else {
-    mv.removeAttribute('orientation');
-  }
-
-  // Show modal + loading
+  // Open modal and show initial loading state
   $('arModal').classList.add('active');
-  showLoading(true, product.glbSizeMB);
+  $('arUnavail').style.display = 'none';
+  showLoading(true, 0);
 
-  // CRITICAL FIX: properly encode path with Vietnamese chars/spaces
-  mv.removeAttribute('src');
+  // Set 3D model source
   if (product.glbFile) {
-    mv.setAttribute('src', encodePath(product.glbFile));
+    mv.src = product.glbFile;
   } else {
     try {
       const url = await generateFallbackGLB(product);
-      mv.setAttribute('src', url);
+      mv.src = url;
     } catch (err) {
       console.error('Fallback GLB error:', err);
       showLoading(false);
+      $('arUnavail').style.display = 'flex';
+      $('arUnavail').innerHTML = `<i class="bi bi-exclamation-triangle"></i> Lỗi tạo mô hình 3D: ${err.message}`;
     }
   }
 }
@@ -160,52 +152,63 @@ async function openViewer(product) {
 // ─── model-viewer events ─────────────────────────
 function setupModelViewerEvents() {
   const mv = $('modelViewer');
+  if (!mv) return;
 
-  // Hide loading when model is ready
+  // Real-time download progress tracking
+  mv.addEventListener('progress', e => {
+    const progress = Math.round((e.detail.totalProgress || 0) * 100);
+    showLoading(true, progress);
+  });
+
+  // Model successfully loaded and ready for rendering
   mv.addEventListener('load', () => {
     showLoading(false);
     const arBtn = $('arBtn');
     if (!mv.canActivateAR) {
       if (arBtn) arBtn.style.display = 'none';
       $('arUnavail').style.display = 'flex';
+      $('arUnavail').innerHTML = `<i class="bi bi-info-circle"></i> Trình duyệt máy tính hỗ trợ xoay 360°. Để dùng AR camera, mở link trên Safari iPhone hoặc Chrome Android.`;
     } else {
       if (arBtn) arBtn.style.display = 'flex';
       $('arUnavail').style.display = 'none';
     }
   });
 
-  // If model errors (wrong path, CORS, etc.)
+  // Model loading failure
   mv.addEventListener('error', e => {
     console.error('model-viewer error:', e);
     showLoading(false);
     $('arUnavail').style.display = 'flex';
-    $('arUnavail').innerHTML = `<i class="bi bi-exclamation-triangle"></i> Không tải được mô hình 3D. File GLB có thể đang bị lỗi đường dẫn.`;
+    $('arUnavail').innerHTML = `<i class="bi bi-exclamation-triangle"></i> Không thể tải file mô hình 3D. Vui lòng kiểm tra kết nối mạng và thử lại.`;
   });
 
-  // AR session feedback
+  // AR lifecycle state transitions
   mv.addEventListener('ar-status', e => {
     const arBtn = $('arBtn');
-    if (e.detail.status === 'session-started') {
-      if (arBtn) arBtn.innerHTML = `<i class="bi bi-record-circle-fill"></i> AR đang chạy...`;
-    } else if (e.detail.status === 'not-presenting') {
+    const status = e.detail.status;
+    if (status === 'session-started') {
+      if (arBtn) arBtn.innerHTML = `<i class="bi bi-record-circle-fill"></i> AR đang hoạt động...`;
+    } else if (status === 'not-presenting') {
       if (arBtn) arBtn.innerHTML = `<i class="bi bi-camera-fill"></i> Bật AR — Đặt vào phòng`;
-    } else if (e.detail.status === 'failed') {
-      alert('AR không khởi động được.\n\n• Cấp quyền Camera cho trình duyệt\n• Dùng Safari iOS 15+ hoặc Chrome Android\n• Truy cập qua HTTPS (link Cloudflare đang dùng ✓)');
+    } else if (status === 'failed') {
+      alert('Không thể khởi động AR.\n\n• Vui lòng cấp quyền Camera cho trình duyệt\n• Dùng Safari (iOS 15+) hoặc Chrome (Android có ARCore)\n• Đảm bảo truy cập qua giao thức HTTPS.');
       if (arBtn) arBtn.innerHTML = `<i class="bi bi-camera-fill"></i> Bật AR — Đặt vào phòng`;
     }
   });
 }
 
-function showLoading(show, sizeMB = null) {
+function showLoading(show, percent = 0) {
   const el = $('mvLoading');
+  if (!el) return;
   el.style.display = show ? 'flex' : 'none';
-  if (show && sizeMB) {
+  if (show) {
     el.innerHTML = `
       <div class="mv-spinner"></div>
-      <span>Đang tải mô hình 3D...</span>
-      <span class="load-size-warn"><i class="bi bi-exclamation-triangle-fill"></i> File nặng ~${sizeMB}MB — cần WiFi, có thể mất 30-60 giây</span>`;
-  } else if (show) {
-    el.innerHTML = `<div class="mv-spinner"></div><span>Đang tải mô hình 3D...</span>`;
+      <span style="font-weight:600;font-size:1rem;">Đang tải mô hình 3D... ${percent > 0 ? `${percent}%` : ''}</span>
+      <div style="width:160px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden;margin-top:4px;">
+        <div style="width:${Math.max(percent, 5)}%;height:100%;background:#A50034;transition:width 0.2s ease;"></div>
+      </div>
+    `;
   }
 }
 
@@ -226,28 +229,27 @@ function setupFilters() {
 
 // ─── Modal open/close ────────────────────────────
 function setupModals() {
-  // AR modal
   $('arModalClose').addEventListener('click', closeARModal);
   $('arModal').addEventListener('click', e => {
     if (e.target === $('arModal')) closeARModal();
   });
 
-  // Upload modal
   $('btnOpenUpload').addEventListener('click', () => $('uploadModal').classList.add('active'));
   $('uploadModalClose').addEventListener('click', () => $('uploadModal').classList.remove('active'));
   $('uploadModal').addEventListener('click', e => {
     if (e.target === $('uploadModal')) $('uploadModal').classList.remove('active');
   });
 
-  // Form submit
   $('addProductForm').addEventListener('submit', handleAddProduct);
 }
 
 function closeARModal() {
   $('arModal').classList.remove('active');
   const mv = $('modelViewer');
-  mv.removeAttribute('src');
-  mv.removeAttribute('ar-placement');
+  if (mv) {
+    mv.removeAttribute('src');
+    mv.removeAttribute('ar-placement');
+  }
   showLoading(false);
   const arBtn = $('arBtn');
   if (arBtn) arBtn.innerHTML = `<i class="bi bi-camera-fill"></i> Bật AR — Đặt vào phòng`;
@@ -270,7 +272,7 @@ function handleAddProduct(e) {
   }
 
   const frontFile = $('imgFront').files[0];
-  const frontUrl  = frontFile ? URL.createObjectURL(frontFile) : 'product info/Tủ lạnh/front_processed.png';
+  const frontUrl  = frontFile ? URL.createObjectURL(frontFile) : 'images/products/refrigerator_front.png';
 
   const catMap = {
     'Tủ lạnh': 'refrigerator', 'Máy giặt': 'washer',
@@ -295,15 +297,15 @@ function handleAddProduct(e) {
   openViewer(prod);
 }
 
-// ─── Fallback box GLB (no .glb file, uses Three.js export) ──
+// ─── Fallback box GLB (Three.js generated for dimension preview) ──
 function makeMat(tex) {
   return tex
-    ? new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: .1, metalness: .2, roughness: .3 })
-    : new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: .5, roughness: .3 });
+    ? new THREE.MeshStandardMaterial({ map: tex, transparent: true, alphaTest: 0.1, metalness: 0.2, roughness: 0.3 })
+    : new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.5, roughness: 0.3 });
 }
 
 async function generateFallbackGLB(product) {
-  if (typeof THREE === 'undefined' || !THREE.GLTFExporter) throw new Error('Three.js not ready');
+  if (typeof THREE === 'undefined' || !THREE.GLTFExporter) throw new Error('Three.js not loaded');
 
   return new Promise((resolve, reject) => {
     const W = (product.dimensions?.width  || 60) / 100;
@@ -312,7 +314,7 @@ async function generateFallbackGLB(product) {
 
     const loader = new THREE.TextureLoader();
     const imgs = product.images || {};
-    const load = p => p ? loader.load(encodePath(p)) : null;
+    const load = p => p ? loader.load(p) : null;
 
     const geo = new THREE.BoxGeometry(W, H, D);
     const mats = [
@@ -326,7 +328,7 @@ async function generateFallbackGLB(product) {
     const scene = new THREE.Scene();
     scene.add(mesh);
     scene.add(new THREE.DirectionalLight(0xffffff, 1.2));
-    scene.add(new THREE.AmbientLight(0xffffff, .8));
+    scene.add(new THREE.AmbientLight(0xffffff, 0.8));
 
     new THREE.GLTFExporter().parse(
       scene,

@@ -12,14 +12,7 @@
       "unit": "cm"
     },
     "images": {
-      "front": "product info/Tủ lạnh/front_processed.png",
-      "frontLight": "product info/Tủ lạnh/front - light_processed.png",
-      "left": "product info/Tủ lạnh/left_processed.png",
-      "right": "product info/Tủ lạnh/right_processed.png",
-      "side": "product info/Tủ lạnh/side_processed.png",
-      "top": "product info/máy lạnh/top_processed.png",
-      "detail1": "product info/Tủ lạnh/detail-1_processed.png",
-      "detail2": "product info/Tủ lạnh/detail-2_processed.png"
+      "front": "images/products/refrigerator_front.png"
     },
     "description": "Tủ lạnh dung tích lớn với bề mặt thép không gỉ hiện đại, thiết kế cửa Multi-Door cao cấp."
   },
@@ -36,13 +29,7 @@
       "unit": "cm"
     },
     "images": {
-      "front": "product info/Máy giặt/front_processed.png",
-      "back": "product info/Máy giặt/back_processed.png",
-      "left": "product info/Máy giặt/left_processed.png",
-      "right": "product info/Máy giặt/right_processed.png",
-      "top": "product info/Máy giặt/above_processed.png",
-      "under": "product info/Máy giặt/under_processed.png",
-      "control": "product info/Máy giặt/bảng điều khiển_processed.png"
+      "front": "images/products/washer_front.png"
     },
     "description": "Tháp giặt sấy tích hợp 2 trong 1 thiết kế đứng tiết kiệm diện tích, điều khiển cảm ứng thông minh."
   },
@@ -59,11 +46,7 @@
       "unit": "cm"
     },
     "images": {
-      "front": "product info/TV OLED/front_processed.png",
-      "back": "product info/TV OLED/back_processed.png",
-      "left": "product info/TV OLED/left_processed.png",
-      "right": "product info/TV OLED/right_processed.png",
-      "both": "product info/TV OLED/both side_processed.png"
+      "front": "images/products/tv_front.png"
     },
     "description": "TV OLED siêu mỏng 83 inch hình ảnh sắc nét, tích hợp chân đế để bàn hợp kim sang trọng."
   },
@@ -80,10 +63,7 @@
       "unit": "cm"
     },
     "images": {
-      "front": "product info/TV OLED/front_processed.png",
-      "back": "product info/TV OLED/back_processed.png",
-      "left": "product info/TV OLED/left_processed.png",
-      "right": "product info/TV OLED/right_processed.png"
+      "front": "images/products/tv_front.png"
     },
     "description": "TV OLED thiết kế gallery áp tường siêu mỏng, tối ưu cho góc nhìn phòng khách hiện đại."
   },
@@ -93,7 +73,8 @@
     "category": "Máy lạnh",
     "categoryKey": "ac",
     "placement": "wall",
-    "glbFile": "product info/máy lạnh/IDC12M2.glb",
+    "glbFile": "models/ac_lg.glb",
+    "glbSizeMB": 2.4,
     "dimensions": {
       "height": 30.7,
       "width": 79.9,
@@ -101,11 +82,7 @@
       "unit": "cm"
     },
     "images": {
-      "front": "product info/máy lạnh/front_processed.png",
-      "frontOpen": "product info/máy lạnh/front - open_processed.png",
-      "top": "product info/máy lạnh/top_processed.png",
-      "left": "product info/máy lạnh/left_processed.png",
-      "right": "product info/máy lạnh/right_processed.png"
+      "front": "images/products/ac_front.png"
     },
     "description": "Máy lạnh treo tường công nghệ Inverter tiết kiệm điện, thiết kế bo cong thanh lịch. Model 3D chính xác tỉ lệ 1:1."
   },
@@ -115,8 +92,8 @@
     "category": "Máy lọc KK",
     "categoryKey": "purifier",
     "placement": "floor",
-    "glbFile": "product info/Máy hút ẩm/MD19GQGE0.glb",
-    "glbSizeMB": 7,
+    "glbFile": "models/purifier_lg.glb",
+    "glbSizeMB": 6.1,
     "dimensions": {
       "height": 59.6,
       "width": 38.6,
@@ -124,6 +101,6 @@
       "unit": "cm"
     },
     "images": {},
-    "description": "Máy lọc không khí LG PuriCare 360° với bộ lọc HEPA 13, làm sạch không khí theo chu kỳ. File 3D GLB nặng ~66MB, cần WiFi để tải nhanh."
+    "description": "Máy lọc không khí LG PuriCare 360° với bộ lọc HEPA 13, làm sạch không khí theo chu kỳ. Model 3D tối ưu tải nhanh cho AR di động."
   }
 ]
