@@ -1,0 +1,96 @@
+[
+  {
+    "id": "air-conditioner-lg",
+    "name": "Máy lạnh Inverter Treo tường LG IDC12M2",
+    "category": "Máy lạnh",
+    "categoryKey": "ac",
+    "status": "ready",
+    "placement": "wall",
+    "glbFile": "models/ac_lg.glb",
+    "glbSizeMB": 2.4,
+    "dimensions": {
+      "height": 30.7,
+      "width": 79.9,
+      "depth": 23.5,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "images/products/ac_front.png"
+    },
+    "description": "Máy lạnh treo tường công nghệ Inverter tiết kiệm điện, thiết kế bo cong thanh lịch. Model 3D chuẩn tỉ lệ 1:1 đặt tường."
+  },
+  {
+    "id": "air-purifier-lg",
+    "name": "Máy lọc không khí LG PuriCare MD19GQGE0",
+    "category": "Máy lọc KK",
+    "categoryKey": "purifier",
+    "status": "ready",
+    "placement": "floor",
+    "glbFile": "models/purifier_lg.glb",
+    "glbSizeMB": 6.1,
+    "dimensions": {
+      "height": 59.6,
+      "width": 38.6,
+      "depth": 38.6,
+      "unit": "cm"
+    },
+    "images": {},
+    "description": "Máy lọc không khí LG PuriCare 360° với bộ lọc HEPA 13. Model 3D tối ưu tải nhanh cho AR di động, chuẩn tỉ lệ 1:1."
+  },
+  {
+    "id": "tv-65qned9masa",
+    "name": "Smart TV LG QNED evo AI 65 Inch 65QNED9MASA",
+    "category": "TV QNED",
+    "categoryKey": "tv",
+    "status": "ready",
+    "placement": "floor",
+    "glbFile": "models/tv_65qned_lg.glb",
+    "glbSizeMB": 4.1,
+    "dimensions": {
+      "height": 91.0,
+      "width": 145.6,
+      "depth": 28.5,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "images/products/tv_qned_front.jpg"
+    },
+    "description": "Smart TV LG QNED evo AI MiniLED 4K 65 Inch chính hãng trích xuất từ LG Việt Nam, chuẩn tỉ lệ 1:1."
+  },
+  {
+    "id": "refrigerator-lg",
+    "name": "Tủ lạnh LG Inverter Multi-Door",
+    "category": "Tủ lạnh",
+    "categoryKey": "refrigerator",
+    "status": "coming_soon",
+    "placement": "floor",
+    "dimensions": {
+      "height": 178.7,
+      "width": 83.5,
+      "depth": 73.0,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "images/products/refrigerator_front.png"
+    },
+    "description": "Tủ lạnh dung tích lớn với bề mặt thép không gỉ hiện đại, thiết kế cửa Multi-Door cao cấp."
+  },
+  {
+    "id": "washer-tower-lg",
+    "name": "Tháp giặt sấy LG WashTower",
+    "category": "Máy giặt",
+    "categoryKey": "washer",
+    "status": "coming_soon",
+    "placement": "floor",
+    "dimensions": {
+      "height": 165.5,
+      "width": 60.0,
+      "depth": 66.0,
+      "unit": "cm"
+    },
+    "images": {
+      "front": "images/products/washer_front.png"
+    },
+    "description": "Tháp giặt sấy tích hợp 2 trong 1 thiết kế đứng tiết kiệm diện tích, điều khiển cảm ứng thông minh."
+  }
+]

@@ -1,0 +1,53 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.env
+*.log
+.DS_Store
+
+# IDE / Agent configs (local only)
+.cursor/
+.claude/
+.agents/
+.ai-devkit.json
+
+# Ignore credentials and sensitive key JSON files
+*client_secret*.json
+graphic-mission*.json
+google-workspace-mcp/
+
+# Ignore large media & temporary files from youtube project
+youtube/output/
+youtube/temp/
+youtube/*.mp4
+*.mp4
+*.wav
+*.avi
+*.mkv
+
+# Old / scratch folders
+day 2 - 20260721/
+BTVN/
+price_tracker_app/
+youtube/
+youtube_dubber_backend/
+youtube_dubber_frontend/
+google-workspace-mcp/
+
+# Unused files in root
+dmx_scraper.py
+interactive_app.py
+main.py
+price_history.py
+test_automation.py
+tax_regulations_2026.md
+telegram_bot.py
+gsheet_manager.py
+docker-compose.yml
+docs/
+
+# Large local binaries / assets (khong dua len repo)
+cloudflared.exe
+*.pptx
+*.exe
