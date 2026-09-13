@@ -45,7 +45,10 @@ tax_regulations_2026.md
 telegram_bot.py
 gsheet_manager.py
 docker-compose.yml
-docs/
+# docs/ chua anh minh hoa README -> KHONG ignore ca thu muc.
+# Chi loai tru tai lieu cua cac project cu khong thuoc repo nay:
+docs/ai/
+docs/DMX_PRICE_TRACKER_PRESENTATION.md
 
 # Large local binaries / assets (khong dua len repo)
 cloudflared.exe
