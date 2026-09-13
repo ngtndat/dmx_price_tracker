@@ -40,8 +40,8 @@ jobs:
       - name: Run full_colab_scraper.py
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-          SPREADSHEET_URL: ${{ secrets.SPREADSHEET_URL_AIRPURIFIER }}
-          SHEET_NAME: ${{ secrets.SHEET_NAME_AIRPURIFIER }}
+          SPREADSHEET_URL: ${{ secrets.SPREADSHEET_URL }}
+          SHEET_NAME: Sheet1
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python full_colab_scraper.py
@@ -69,8 +69,8 @@ jobs:
       - name: Run lg_ac_colab_scraper.py
         env:
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-          SPREADSHEET_URL: ${{ secrets.SPREADSHEET_URL_AC }}
-          SHEET_NAME: ${{ secrets.SHEET_NAME_AC }}
+          SPREADSHEET_URL: ${{ secrets.SPREADSHEET_URL }}
+          SHEET_NAME: raw_RAC
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python lg_ac_colab_scraper.py
