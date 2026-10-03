@@ -438,45 +438,152 @@ def parse_dmcl_detail(url, category_selling_price="0", category_mrp_price="0"):
         return {"Status": "Error", "MRP": format_price(category_mrp_price), "Selling": format_price(category_selling_price), "Promotions": f"Lỗi: {e}"}
 
 def scrape_dmcl(url="https://dienmaycholon.com/may-lanh-lg"):
-    print(f"\n--- 2. CÀO ĐIỆN MÁY CHỢ LỚN (DMCL) ---")
+    print("\n--- 2. CÀO ĐIỆN MÁY CHỢ LỚN (DMCL) ---")
     try:
-        response = requests.get(url, headers={**HEADERS, "Referer": "https://dienmaycholon.com"}, verify=False, timeout=15)
-        if response.status_code != 200:
-            print(f"[!] Lỗi kết nối DMCL: {response.status_code}")
+        response = smart_get(
+            url,
+            headers={
+                **HEADERS,
+                "Referer": "https://dienmaycholon.com"
+            },
+            verify=False,
+            timeout=20
+        )
+        if not response:
+            print("[!] Không kết nối được DMCL")
             return []
-        soup = BeautifulSoup(response.text, "html.parser")
-        products_div = soup.find("div", class_="products")
-        if not products_div:
-            return []
-        items = products_div.find_all("div", class_="product")
+        soup = BeautifulSoup(
+            response.text,
+            "html.parser"
+        )
+        cards = soup.find_all(
+            "a",
+            class_="product-card"
+        )
+        print(
+            f"Tìm thấy {len(cards)} sản phẩm DMCL"
+        )
         results = []
-        for idx, item in enumerate(items, 1):
-            name_tag = item.find("a", class_="name_pro")
-            model_name = clean_text(name_tag.text) if name_tag else "N/A"
-            price_sale = item.find(class_="price_sale")
-            category_selling_price = clean_price(price_sale.text) if price_sale else "0"
-            price_market = item.find(class_="price_market")
-            category_mrp_price = clean_price(price_market.text) if price_market else "0"
-            href = name_tag.get("href")
-            if not href: continue
-            full_link = href if href.startswith("http") else f"https://dienmaycholon.com{href}"
-            full_link = full_link.split("?")[0]
-            
-            print(f"[{idx}/{len(items)}] DMCL: {model_name}")
-            details = parse_dmcl_detail(full_link, category_selling_price, category_mrp_price)
-            status = details["Status"]
-            if status == "đang kinh doanh":
-                if "mới" in model_name.lower() or "new" in model_name.lower():
-                    status = "sản phẩm mới"
-            results.append({
-                "Page Title": "DMCL", "Tên Model": model_name, "Status": status, "direct product link": full_link,
-                "MRP price": details["MRP"], "Selling price": details["Selling"], "Thông tin chương trình khuyến mãi": details["Promotions"]
-            })
-            time.sleep(1.5)
+        for card in cards:
+            try:
+                title = card.find(
+                    "h3",
+                    class_="product-title"
+                )
+                if not title:
+                    continue
+                model_name = title.get_text(
+                    strip=True
+                )
+                sell = card.find(
+                    "p",
+                    class_="product-price-new"
+                )
+                selling_price = ""
+                if sell:
+                    selling_price = re.sub(
+                        r"[^\d]",
+                        "",
+                        sell.get_text()
+                    )
+                old = card.find(
+                    "p",
+                    class_="product-price-old"
+                )
+                mrp_price = ""
+                if old:
+                    badge = old.find("span")
+                    if badge:
+                        badge.extract()
+                    mrp_price = re.sub(
+                        r"[^\d]",
+                        "",
+                        old.get_text()
+                    )
+                promo = card.find(
+                    "p",
+                    class_="item-gift"
+                )
+                promo_text = (
+                    promo.get_text(
+                        " ",
+                        strip=True
+                    )
+                    if promo
+                    else ""
+                )
+                href = card.get(
+                    "href",
+                    ""
+                )
+                if href.startswith("/"):
+                    href = (
+                        "https://dienmaycholon.com"
+                        + href
+                    )
+                results.append(
+                    {
+                        "Page Title": "DMCL",
+                        "Tên Model": model_name,
+                        "Status": "đang kinh doanh",
+                        "direct product link": href,
+                        "MRP price": format_price(mrp_price),
+                        "Selling price": format_price(selling_price),
+                        "Thông tin chương trình khuyến mãi": promo_text
+                    }
+                )
+            except Exception as item_error:
+                print(
+                    f"[DMCL ERROR] {item_error}"
+                )
+        print(
+            f"DMCL hoàn tất: {len(results)} sản phẩm"
+        )
         return results
     except Exception as e:
-        print(f"[!] Lỗi cào DMCL: {e}")
+        print(f"[DMCL FAIL] {e}")
         return []
+
+#def scrape_dmcl(url="https://dienmaycholon.com/may-lanh-lg"):
+#    print(f"\n--- 2. CÀO ĐIỆN MÁY CHỢ LỚN (DMCL) ---")
+#    try:
+#        response = requests.get(url, headers={**HEADERS, "Referer": "https://dienmaycholon.com"}, verify=False, timeout=15)
+#        if response.status_code != 200:
+#            print(f"[!] Lỗi kết nối DMCL: {response.status_code}")
+#            return []
+#        soup = BeautifulSoup(response.text, "html.parser")
+#        products_div = soup.find("div", class_="products")
+#        if not products_div:
+#            return []
+#        items = products_div.find_all("div", class_="product")
+#        results = []
+#        for idx, item in enumerate(items, 1):
+#            name_tag = item.find("a", class_="name_pro")
+#            model_name = clean_text(name_tag.text) if name_tag else "N/A"
+#            price_sale = item.find(class_="price_sale")
+#            category_selling_price = clean_price(price_sale.text) if price_sale else "0"
+#            price_market = item.find(class_="price_market")
+#            category_mrp_price = clean_price(price_market.text) if price_market else "0"
+#            href = name_tag.get("href")
+#            if not href: continue
+#            full_link = href if href.startswith("http") else f"https://dienmaycholon.com{href}"
+#            full_link = full_link.split("?")[0]
+#            
+#            print(f"[{idx}/{len(items)}] DMCL: {model_name}")
+#            details = parse_dmcl_detail(full_link, category_selling_price, category_mrp_price)
+#            status = details["Status"]
+#            if status == "đang kinh doanh":
+#                if "mới" in model_name.lower() or "new" in model_name.lower():
+#                    status = "sản phẩm mới"
+#            results.append({
+#                "Page Title": "DMCL", "Tên Model": model_name, "Status": status, "direct product link": full_link,
+#                "MRP price": details["MRP"], "Selling price": details["Selling"], "Thông tin chương trình khuyến mãi": details["Promotions"]
+#            })
+#            time.sleep(1.5)
+#        return results
+#    except Exception as e:
+#        print(f"[!] Lỗi cào DMCL: {e}")
+#        return []
 
 # ==============================================================================
 # 3. NGUYEN KIM SCRAPER (NK)
