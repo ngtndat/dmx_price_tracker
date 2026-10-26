@@ -366,7 +366,7 @@ def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
             txt = sc.get_text(strip=True)
         
             print(f"JSON-LD #{i+1} length:", len(txt))
-            print(txt[:300])
+            print(txt[:2000])
         for sc in scripts:
             try:
                 #data = json.loads(sc.string)
