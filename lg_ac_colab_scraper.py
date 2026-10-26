@@ -340,10 +340,43 @@ def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
             print(f"[!] Lỗi kết nối DMX: {response.status_code}")
             return []
         soup = BeautifulSoup(response.text, "html.parser")
-        list_product_ul = soup.find("ul", class_="listproduct")
-        if not list_product_ul:
-            return []
-        lis = list_product_ul.find_all("li", recursive=False)
+        import json
+        products = []
+        scripts = soup.find_all(
+            "script",
+            type="application/ld+json"
+        )
+        for sc in scripts:
+            try:
+                data = json.loads(sc.string)
+                if (
+                    isinstance(data, dict)
+                    and "mainEntity" in data
+                    and isinstance(data["mainEntity"], dict)
+                    and "itemListElement" in data["mainEntity"]
+                ):
+                    items = data["mainEntity"]["itemListElement"]
+                    for row in items:
+                        product = row.get("item", {})
+                        name = product.get("name", "")
+                        if "LG" not in name.upper():
+                            continue
+                        price = (
+                            product
+                            .get("offers", {})
+                            .get("price", "")
+                        )
+                        url = product.get("url", "")
+                        products.append({
+                            "name": name,
+                            "price": str(price),
+                            "url": url
+                        })
+            except Exception:
+                pass
+        print(
+            f"[DMX] Tìm thấy {len(products)} sản phẩm"
+        )
         results = []
         for idx, li in enumerate(lis, 1):
             a_tag = li.find("a", class_="main-contain") or li.find("a")
