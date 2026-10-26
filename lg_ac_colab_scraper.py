@@ -332,7 +332,20 @@ def parse_dmx_detail(url, category_selling_price="0", category_mrp_price="0"):
 def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
     print(f"\n--- 1. CÀO DIỆN MÁY XANH (DMX) ---")
     try:
-        response = smart_get(url, headers={**HEADERS, "Referer": "https://www.dienmayxanh.com"}, verify=False, timeout=15)
+        #response = smart_get(url, headers={**HEADERS, "Referer": "https://www.dienmayxanh.com"}, verify=False, timeout=15)
+        response = requests.get(
+            url,
+            headers={
+                **HEADERS,
+                "User-Agent": "Mozilla/5.0",
+                "Referer": "https://www.dienmayxanh.com"
+            },
+            verify=False,
+            timeout=30
+        )
+        
+        print("DMX STATUS:", response.status_code)
+        print("DMX HTML:", len(response.text))
         if not response:
             print("[!] Không thể kết nối DMX (cả trực tiếp và proxy đều thất bại)")
             return []
