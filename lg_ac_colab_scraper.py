@@ -378,27 +378,25 @@ def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
             f"[DMX] Tìm thấy {len(products)} sản phẩm"
         )
         results = []
-        for idx, li in enumerate(lis, 1):
-            a_tag = li.find("a", class_="main-contain") or li.find("a")
-            if not a_tag: continue
-            model_name = a_tag.get("data-name") or li.find("p", class_="product-title").text.strip()
-            category_selling_price = a_tag.get("data-price", "0")
-            category_mrp_price = li.get("data-price", "0")
-            relative_link = a_tag.get("href")
-            full_link = relative_link if relative_link.startswith("http") else f"https://www.dienmayxanh.com{relative_link}"
-            full_link = full_link.split("?")[0]
-            
-            print(f"[{idx}/{len(lis)}] DMX: {model_name}")
-            details = parse_dmx_detail(full_link, category_selling_price, category_mrp_price)
-            status = details["Status"]
-            if status == "đang kinh doanh":
-                item_label = li.find(class_="item-label")
-                label_text = clean_text(item_label.text).lower() if item_label else ""
-                if "mới" in label_text or "mẫu mới" in label_text:
-                    status = "sản phẩm mới"
+        for idx, product in enumerate(products, 1):
+            model_name = product["name"]
+            category_selling_price = product["price"]
+            category_mrp_price = product["price"]
+            full_link = product["url"]
+            print(f"[{idx}/{len(products)}] DMX: {model_name}")
+            details = parse_dmx_detail(
+                full_link,
+                category_selling_price,
+                category_mrp_price
+            )
             results.append({
-                "Page Title": "DMX", "Tên Model": model_name, "Status": status, "direct product link": full_link,
-                "MRP price": details["MRP"], "Selling price": details["Selling"], "Thông tin chương trình khuyến mãi": details["Promotions"]
+                "Page Title": "DMX",
+                "Tên Model": model_name,
+                "Status": details["Status"],
+                "direct product link": full_link,
+                "MRP price": details["MRP"],
+                "Selling price": details["Selling"],
+                "Thông tin chương trình khuyến mãi": details["Promotions"]
             })
             time.sleep(1.5)
         return results
