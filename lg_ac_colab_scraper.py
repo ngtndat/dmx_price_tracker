@@ -361,9 +361,14 @@ def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
             "script",
             type="application/ld+json"
         )
+        print("DMX JSON-LD count:", len(scripts))
         for sc in scripts:
             try:
-                data = json.loads(sc.string)
+                #data = json.loads(sc.string)
+                raw_json = sc.get_text(strip=True)
+                if not raw_json:
+                    continue
+                data = json.loads(raw_json)
                 if (
                     isinstance(data, dict)
                     and "mainEntity" in data
