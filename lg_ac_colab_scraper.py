@@ -333,7 +333,7 @@ def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
     print(f"\n--- 1. CÀO DIỆN MÁY XANH (DMX) ---")
     try:
         #response = smart_get(url, headers={**HEADERS, "Referer": "https://www.dienmayxanh.com"}, verify=False, timeout=15)
-        response = requests.get(
+        response = requests.smart_get(
             url,
             headers={
                 **HEADERS,
