@@ -375,7 +375,7 @@ def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
             except Exception:
                 pass
         print(
-            f"[DMX] Tìm thấy {len(products)} sản phẩm"
+            f"[DMX patch 4] Tìm thấy {len(products)} sản phẩm"
         )
         results = []
         for idx, product in enumerate(products, 1):
