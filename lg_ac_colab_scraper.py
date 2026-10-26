@@ -362,6 +362,11 @@ def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
             type="application/ld+json"
         )
         print("DMX JSON-LD count:", len(scripts))
+        for i, sc in enumerate(scripts):
+            txt = sc.get_text(strip=True)
+        
+            print(f"JSON-LD #{i+1} length:", len(txt))
+            print(txt[:300])
         for sc in scripts:
             try:
                 #data = json.loads(sc.string)
