@@ -382,15 +382,17 @@ def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
                 ):
                     items = data["mainEntity"]["itemListElement"]
                     for row in items:
-                        product = row.get("item", {})
+                        product = row.get("item")
+                        if not product:
+                            product = row
                         name = product.get("name", "")
                         if "LG" not in name.upper():
                             continue
-                        price = (
-                            product
-                            .get("offers", {})
-                            .get("price", "")
-                        )
+                        offers = product.get("offers", {})
+                        if isinstance(offers, dict):
+                            price = offers.get("price", "")
+                        else:
+                            price = ""
                         url = product.get("url", "")
                         products.append({
                             "name": name,
