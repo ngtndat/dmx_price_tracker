@@ -353,6 +353,8 @@ def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
             print(f"[!] Lỗi kết nối DMX: {response.status_code}")
             return []
         soup = BeautifulSoup(response.text, "html.parser")
+        print("DMX HTML length:", len(response.text))
+        print(response.text[:1000])
         import json
         products = []
         scripts = soup.find_all(
