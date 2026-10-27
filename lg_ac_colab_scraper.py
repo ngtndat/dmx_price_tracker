@@ -374,7 +374,7 @@ def parse_dmx_jsonld(soup):
             pass
     return items, expected
 
-def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
+def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg#o=2&pi=0"):
     print("\n--- 1. CÀO DIỆN MÁY XANH (DMX) ---")
     try:
         response = smart_get(
