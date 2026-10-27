@@ -1383,7 +1383,7 @@ def run_scraper_job(gc, next_run_str=None):
         all_data.extend(results)
     
     print("\n==================== BẮT ĐẦU QUÉT MÁY LẠNH LG ====================")
-    run_and_count(scrape_dmx, "https://www.dienmayxanh.com/may-lanh-lg")
+    run_and_count(scrape_dmx, "https://www.dienmayxanh.com/may-lanh-lg#o=2&pi=0")
     run_and_count(scrape_dmcl, "https://dienmaycholon.com/may-lanh-lg")
     run_and_count(scrape_nk, "https://www.nguyenkim.com/dieu-hoa.c?property=thuong-hieu-brand:LG")
     run_and_count(scrape_cps, "https://cellphones.com.vn/may-lanh/lg.html")
