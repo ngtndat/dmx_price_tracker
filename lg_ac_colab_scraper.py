@@ -328,50 +328,242 @@ def parse_dmx_detail(url, category_selling_price="0", category_mrp_price="0"):
         }
     except Exception as e:
         return {"Status": "Error", "MRP": format_price(category_mrp_price), "Selling": format_price(category_selling_price), "Promotions": f"Lỗi: {e}"}
+SCRAPE_WARNINGS = []
+DMX_BASE = "https://www.dienmayxanh.com"
+# DMX_FETCH_DETAIL=1 (mặc định): vào thêm trang chi tiết để lấy khuyến mãi đầy đủ.
+# DMX_FETCH_DETAIL=0: chỉ đọc trang danh mục (1 lần tải, nhanh, ít lỗi proxy nhất).
+DMX_FETCH_DETAIL = os.environ.get("DMX_FETCH_DETAIL", "1") != "0"
+
+def parse_dmx_cards(soup):
+    """Đọc tên, link, giá bán, giá gạch ngang, nhãn khuyến mãi ngắn từ các thẻ sản phẩm
+    ngay trên trang danh mục (mỗi thẻ có thuộc tính data-product-code)."""
+    items = []
+    for card in soup.find_all(attrs={"data-product-code": True}):
+        title_a = card.find("a", attrs={"title": True})
+        if not title_a:
+            continue
+        href = title_a.get("href", "")
+        link = (href if href.startswith("http") else DMX_BASE + href).split("?")[0]
+        price_tag = card.select_one("a.text-red-7 > span")
+        selling = clean_price(price_tag.get_text()) if price_tag else "0"
+        del_tag = card.find("del")
+        mrp = clean_price(del_tag.get_text()) if del_tag else "0"
+        if mrp == "0":
+            mrp = selling
+        chips = [clean_text(c.get_text()) for c in card.select("div.w-fit.truncate")]
+        items.append({"name": clean_text(title_a.get("title")), "url": link,
+                      "price": selling, "mrp": mrp, "chips": chips})
+    return items
+
+def parse_dmx_jsonld(soup):
+    """Dữ liệu ẩn của trang: chỉ có tên + link (không có giá), và hay thiếu sản phẩm."""
+    items, expected = [], None
+    for sc in soup.find_all("script", type="application/ld+json"):
+        try:
+            raw = sc.get_text(strip=True)
+            if not raw:
+                continue
+            data = json.loads(raw)
+            main = data.get("mainEntity") if isinstance(data, dict) else None
+            if isinstance(main, dict) and "itemListElement" in main:
+                expected = main.get("numberOfItems")
+                for row in main["itemListElement"]:
+                    p = row.get("item") or row
+                    items.append({"name": p.get("name", ""), "url": p.get("url", "").split("?")[0]})
+        except Exception:
+            pass
+    return items, expected
 
 def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
-    print(f"\n--- 1. CÀO DIỆN MÁY XANH (DMX) ---")
+    print("\n--- 1. CÀO DIỆN MÁY XANH (DMX) ---")
     try:
-        response = smart_get(url, headers={**HEADERS, "Referer": "https://www.dienmayxanh.com"}, verify=False, timeout=15)
+        response = smart_get(
+            url,
+            headers={**HEADERS, "Referer": DMX_BASE},
+            verify=False,
+            timeout=30
+        )
+        # Phải kiểm tra "không có response" TRƯỚC khi đọc response.status_code
         if not response:
             print("[!] Không thể kết nối DMX (cả trực tiếp và proxy đều thất bại)")
+            SCRAPE_WARNINGS.append("DMX: không tải được trang danh mục, lần quét này mất toàn bộ DMX")
             return []
-        if response.status_code != 200:
-            print(f"[!] Lỗi kết nối DMX: {response.status_code}")
-            return []
+
         soup = BeautifulSoup(response.text, "html.parser")
-        list_product_ul = soup.find("ul", class_="listproduct")
-        if not list_product_ul:
-            return []
-        lis = list_product_ul.find_all("li", recursive=False)
-        results = []
-        for idx, li in enumerate(lis, 1):
-            a_tag = li.find("a", class_="main-contain") or li.find("a")
-            if not a_tag: continue
-            model_name = a_tag.get("data-name") or li.find("p", class_="product-title").text.strip()
-            category_selling_price = a_tag.get("data-price", "0")
-            category_mrp_price = li.get("data-price", "0")
-            relative_link = a_tag.get("href")
-            full_link = relative_link if relative_link.startswith("http") else f"https://www.dienmayxanh.com{relative_link}"
-            full_link = full_link.split("?")[0]
-            
-            print(f"[{idx}/{len(lis)}] DMX: {model_name}")
-            details = parse_dmx_detail(full_link, category_selling_price, category_mrp_price)
-            status = details["Status"]
-            if status == "đang kinh doanh":
-                item_label = li.find(class_="item-label")
-                label_text = clean_text(item_label.text).lower() if item_label else ""
-                if "mới" in label_text or "mẫu mới" in label_text:
-                    status = "sản phẩm mới"
+        cards = parse_dmx_cards(soup)
+        jsonld, expected = parse_dmx_jsonld(soup)
+
+        # Gộp: ưu tiên thẻ (có giá). Tên lấy theo dữ liệu ẩn nếu có (giữ tên như các lần quét cũ).
+        merged = {}
+        for c in cards:
+            merged[c["url"]] = c
+        for j in jsonld:
+            if j["url"] in merged:
+                if j["name"]:
+                    merged[j["url"]]["name"] = j["name"]
+            elif j["url"]:
+                merged[j["url"]] = {"name": j["name"], "url": j["url"], "price": "0", "mrp": "0", "chips": []}
+        products = [p for p in merged.values() if "LG" in p["name"].upper()]
+
+        print(f"[DMX] Thẻ trên trang: {len(cards)} | Dữ liệu ẩn: {len(jsonld)} | "
+              f"Trang khai báo: {expected} | Sau khi gộp: {len(products)}")
+
+        if expected and len(products) < int(expected):
+            SCRAPE_WARNINGS.append(
+                f"DMX: trang khai báo {expected} sản phẩm nhưng chỉ đọc được {len(products)} "
+                f"(thiếu {int(expected) - len(products)})"
+            )
+        no_price = [p["name"] for p in products if p["price"] == "0"]
+        if no_price:
+            SCRAPE_WARNINGS.append(
+                f"DMX: {len(no_price)} sản phẩm không đọc được giá từ trang danh mục "
+                f"(chỉ trông vào trang chi tiết): " + ", ".join(no_price)
+            )
+
+        results, failed = [], []
+        for idx, p in enumerate(products, 1):
+            print(f"[{idx}/{len(products)}] DMX: {p['name']}")
+            chip_text = " | ".join(p["chips"]) if p["chips"] else "Không có khuyến mãi riêng biệt."
+            if DMX_FETCH_DETAIL:
+                details = parse_dmx_detail(p["url"], p["price"], p["mrp"])
+                if details["Status"] == "Error":
+                    time.sleep(3)  # thử lại 1 lần
+                    details = parse_dmx_detail(p["url"], p["price"], p["mrp"])
+                if details["Status"] == "Error":
+                    failed.append(p["name"])
+                    # Giá vẫn giữ từ trang danh mục; chỉ thiếu khuyến mãi chi tiết
+                    details = {
+                        "Status": "đang kinh doanh" if p["price"] != "0" else "chưa lấy được chi tiết",
+                        "MRP": format_price(p["mrp"]),
+                        "Selling": format_price(p["price"]),
+                        "Promotions": chip_text + " (chưa lấy được KM chi tiết)"
+                    }
+                time.sleep(1.0)
+            else:
+                details = {"Status": "đang kinh doanh", "MRP": format_price(p["mrp"]),
+                           "Selling": format_price(p["price"]), "Promotions": chip_text}
             results.append({
-                "Page Title": "DMX", "Tên Model": model_name, "Status": status, "direct product link": full_link,
-                "MRP price": details["MRP"], "Selling price": details["Selling"], "Thông tin chương trình khuyến mãi": details["Promotions"]
+                "Page Title": "DMX",
+                "Tên Model": p["name"],
+                "Status": details["Status"],
+                "direct product link": p["url"],
+                "MRP price": details["MRP"],
+                "Selling price": details["Selling"],
+                "Thông tin chương trình khuyến mãi": details["Promotions"]
             })
-            time.sleep(1.5)
+
+        if failed:
+            SCRAPE_WARNINGS.append(
+                f"DMX: {len(failed)}/{len(products)} sản phẩm không tải được trang chi tiết "
+                f"(giá vẫn lấy từ danh mục, thiếu khuyến mãi chi tiết): " + ", ".join(failed)
+            )
         return results
     except Exception as e:
         print(f"[!] Lỗi cào DMX: {e}")
+        SCRAPE_WARNINGS.append(f"DMX: lỗi bất ngờ ({e})")
         return []
+
+#def scrape_dmx(url="https://www.dienmayxanh.com/may-lanh-lg"):
+#    print(f"\n--- 1. CÀO DIỆN MÁY XANH (DMX) ---")
+#    try:
+#        #response = smart_get(url, headers={**HEADERS, "Referer": "https://www.dienmayxanh.com"}, verify=False, timeout=15)
+#        response = smart_get(
+#            url,
+#            headers={
+#                **HEADERS,
+#                "User-Agent": "Mozilla/5.0",
+#                "Referer": "https://www.dienmayxanh.com"
+#            },
+#            verify=False,
+#            timeout=30
+#        )
+#        
+#        print("DMX STATUS:", response.status_code)
+#        print("DMX HTML:", len(response.text))
+#        if not response:
+#            print("[!] Không thể kết nối DMX (cả trực tiếp và proxy đều thất bại)")
+#            return []
+#        if response.status_code != 200:
+#            print(f"[!] Lỗi kết nối DMX: {response.status_code}")
+#            return []
+#        soup = BeautifulSoup(response.text, "html.parser")
+#        print("DMX HTML length:", len(response.text))
+#        print(response.text[:1000])
+#        import json
+#        products = []
+#        scripts = soup.find_all(
+#            "script",
+#            type="application/ld+json"
+#        )
+#        print("DMX JSON-LD count:", len(scripts))
+#        for i, sc in enumerate(scripts):
+#            txt = sc.get_text(strip=True)
+#        
+#            print(f"JSON-LD #{i+1} length:", len(txt))
+#            print(txt[:2000])
+#        for sc in scripts:
+#            try:
+#                #data = json.loads(sc.string)
+#                raw_json = sc.get_text(strip=True)
+#                if not raw_json:
+#                    continue
+#                data = json.loads(raw_json)
+#                if (
+#                    isinstance(data, dict)
+#                    and "mainEntity" in data
+#                    and isinstance(data["mainEntity"], dict)
+#                    and "itemListElement" in data["mainEntity"]
+#                ):
+#                    items = data["mainEntity"]["itemListElement"]
+#                    for row in items:
+#                        product = row.get("item")
+#                        if not product:
+#                            product = row
+#                        name = product.get("name", "")
+#                        if "LG" not in name.upper():
+#                            continue
+#                        offers = product.get("offers", {})
+#                        if isinstance(offers, dict):
+#                            price = offers.get("price", "")
+#                        else:
+#                            price = ""
+#                        url = product.get("url", "")
+#                        products.append({
+#                            "name": name,
+#                            "price": str(price),
+#                            "url": url
+#                        })
+#            except Exception:
+#                pass
+#        print(
+#            f"[DMX patch 3_v5] Tìm thấy {len(products)} sản phẩm"
+#        )
+#        results = []
+#        for idx, product in enumerate(products, 1):
+#            model_name = product["name"]
+#            category_selling_price = product["price"]
+#            category_mrp_price = product["price"]
+#            full_link = product["url"]
+#            print(f"[{idx}/{len(products)}] DMX: {model_name}")
+#            details = parse_dmx_detail(
+#                full_link,
+#                category_selling_price,
+#                category_mrp_price
+#            )
+#            results.append({
+#                "Page Title": "DMX",
+#                "Tên Model": model_name,
+#                "Status": details["Status"],
+#                "direct product link": full_link,
+#                "MRP price": details["MRP"],
+#                "Selling price": details["Selling"],
+#                "Thông tin chương trình khuyến mãi": details["Promotions"]
+#            })
+#            time.sleep(1.5)
+#        return results
+#    except Exception as e:
+#        print(f"[!] Lỗi cào DMX: {e}")
+#        return []
 
 # ==============================================================================
 # 2. DIEN MAY CHO LON SCRAPER (DMCL)
