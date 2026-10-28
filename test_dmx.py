@@ -111,20 +111,17 @@ def parse_dmx_detail(url):
 
     try:
 
-        import requests
+        from lg_ac_colab_scraper import smart_get
         
-        proxies = {
-            "http": "http://171.238.101.122:2088",
-            "https": "http://171.238.101.122:2088"
-        }
-        
-        r = requests.get(
+        r = smart_get(
             url,
             headers=HEADERS,
-            timeout=30,
-            proxies=proxies,
+            timeout=15,
             verify=False
         )
+        
+        if not r:
+            raise Exception("smart_get failed")
 
         print(
             "DETAIL STATUS:",
