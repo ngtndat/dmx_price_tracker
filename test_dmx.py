@@ -111,10 +111,19 @@ def parse_dmx_detail(url):
 
     try:
 
+        import requests
+        
+        proxies = {
+            "http": "http://171.238.101.122:2088",
+            "https": "http://171.238.101.122:2088"
+        }
+        
         r = requests.get(
             url,
             headers=HEADERS,
-            timeout=30
+            timeout=30,
+            proxies=proxies,
+            verify=False
         )
 
         print(
