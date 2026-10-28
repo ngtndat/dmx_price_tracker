@@ -172,11 +172,17 @@ def main():
         "may-lanh-lg"
     )
 
-    r = requests.get(
+    from lg_ac_colab_scraper import smart_get
+    
+    r = smart_get(
         url,
         headers=HEADERS,
-        timeout=30
+        timeout=15,
+        verify=False
     )
+    
+    if not r:
+        raise Exception("smart_get failed")
 
     print(
         "STATUS:",
