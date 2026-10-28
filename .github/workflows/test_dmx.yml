@@ -14,6 +14,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - run: pip install requests beautifulsoup4
+      - run: pip install requests beautifulsoup4 gspread oauth2client pandas openpyxl
 
       - run: python test_dmx.py
