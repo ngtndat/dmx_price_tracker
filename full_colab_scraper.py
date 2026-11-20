@@ -952,40 +952,50 @@ def scrape_nk(url=None):
 # ==============================================================================
 # 4. CELLPHONES SCRAPER (CPS)
 # ==============================================================================
+CPS_API = "https://api.cellphones.com.vn/v2/graphql/query"
+CPS_CATEGORY_IDS = {
+    "may-loc-khong-khi": "1146",  # Máy lọc không khí LG
+    "may-hut-am": "2382",         # Máy hút ẩm LG
+}
+
 def scrape_cps(url="https://cellphones.com.vn/nha-thong-minh/may-loc-khong-khi/lg.html"):
-    print(f"\n--- 4. CÀO CELLPHONES (CPS) ---")
+    print("\n--- 4. CÀO CELLPHONES (CPS) ---")
+    cat_id = next((v for k, v in CPS_CATEGORY_IDS.items() if k in url), None)
+    if not cat_id:
+        print(f"[!] Không xác định được category CPS cho {url}")
+        return []
+    query = (
+        'query { products(filter: { static: { categories: ["%s"], province_id: 30, '
+        'stock: { from: 0 }, filter_price: { from: 0, to: 999999999 } } }, page: 1, size: 100) '
+        '{ general { product_id name url_path } filterable { price special_price stock } } }' % cat_id
+    )
+    headers = {**HEADERS, "Content-Type": "application/json",
+               "Origin": "https://cellphones.com.vn", "Referer": "https://cellphones.com.vn/",
+               "X-Client-Type": "web"}
     try:
-        response = requests.get(url, headers=HEADERS, verify=False, timeout=15)
-        if response.status_code != 200:
-            print(f"[!] Lỗi kết nối CellphoneS: {response.status_code}")
+        r = requests.post(CPS_API, json={"query": query, "variables": {}}, headers=headers, timeout=20)
+        if r.status_code != 200:
+            print(f"[!] Lỗi API CellphoneS: HTTP {r.status_code}")
             return []
-        soup = BeautifulSoup(response.text, "html.parser")
-        items = soup.find_all(class_="product-item")
+        r.encoding = "utf-8"
+        items = (r.json().get("data") or {}).get("products") or []
         print(f"Tìm thấy {len(items)} sản phẩm trên CellphoneS.")
         results = []
-        for idx, item in enumerate(items, 1):
-            name_tag = item.find(class_="product__name")
-            model_name = clean_text(name_tag.text) if name_tag else "LG Air Purifier"
-            a_link = item.find("a", class_="product__link")
-            if not a_link: continue
-            href = a_link.get("href")
-            full_link = href.split("?")[0]
-            
-            price_show = item.find(class_="product__price--show")
-            selling_price = clean_price(price_show.text) if price_show else "0"
-            price_through = item.find(class_="product__price--through")
-            mrp_price = clean_price(price_through.text) if price_through else selling_price
-            
-            status = "đang kinh doanh"
-            installment_div = item.find(class_="box-info__installment")
-            if installment_div and "mới" in installment_div.text.lower():
-                status = "sản phẩm mới"
-                
-            print(f"[{idx}/{len(items)}] CPS: {model_name}")
+        for idx, it in enumerate(items, 1):
+            g, f = it.get("general") or {}, it.get("filterable") or {}
+            name = clean_text(g.get("name"))
+            if not name or "LG" not in name.upper():
+                continue
+            mrp = int(f.get("price") or 0)
+            sp = int(f.get("special_price") or 0)
+            selling = sp if sp and sp < mrp else mrp   # special_price = 0 nghĩa là không giảm
+            print(f"[{idx}/{len(items)}] CPS: {name}")
             results.append({
-                "Page Title": "CellphoneS", "Tên Model": model_name, "Status": status, "direct product link": full_link,
-                "MRP price": format_price(mrp_price), "Selling price": format_price(selling_price),
-                "Thông tin chương trình khuyến mãi": "Xem khuyến mãi tại link sản phẩm."
+                "Page Title": "CellphoneS", "Tên Model": name,
+                "Status": "đang kinh doanh",
+                "direct product link": "https://cellphones.com.vn/" + g.get("url_path", ""),
+                "MRP price": format_price(str(mrp)), "Selling price": format_price(str(selling)),
+                "Thông tin chương trình khuyến mãi": "Xem khuyến mãi tại link sản phẩm.",
             })
         return results
     except Exception as e:
@@ -1527,6 +1537,24 @@ def get_gc():
 # ==============================================================================
 # CORE JOB: Chạy 1 lần quét + ghi sheet + gửi telegram
 # ==============================================================================
+from concurrent.futures import ThreadPoolExecutor
+
+def run_all(tasks, max_workers=8):
+    """tasks: list các (hàm_cào, url). Chạy song song, trả kết quả theo ĐÚNG thứ tự đầu vào.
+    Có in thời gian từng trang để biết trang nào chậm."""
+    def _one(t):
+        fn, url = t
+        t0 = time.time()
+        try:
+            res = fn(url)
+        except Exception as e:
+            print(f"[!] {fn.__name__} lỗi: {e}")
+            res = []
+        print(f"[⏱] {fn.__name__} ({url[:60]}): {time.time() - t0:.0f}s, {len(res)} sp")
+        return res
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(tasks))) as ex:
+        return list(ex.map(_one, tasks))
+
 def run_scraper_job(gc, next_run_str=None):
     """Thực hiện 1 lần quét toàn bộ, ghi vào Google Sheet, gửi Telegram."""
     print("\n" + "="*70)
@@ -1536,31 +1564,32 @@ def run_scraper_job(gc, next_run_str=None):
     all_data = []
     source_counts = {}
     
-    def run_and_count(scrape_fn, *args, label=None):
-        results = scrape_fn(*args)
+    def add_results(results, label=None):
         src = results[0]["Page Title"] if results else (label or "Unknown")
         source_counts[src] = source_counts.get(src, 0) + len(results)
         all_data.extend(results)
-    
-    # --- PHẦN 1: MÁY LỌC KHÔNG KHÍ LG ---
-    print("\n==================== QUÉT MÁY LỌC KHÔNG KHÍ LG ====================")
-    run_and_count(scrape_dmx, "https://www.dienmayxanh.com/may-loc-khong-khi-lg")
-    run_and_count(scrape_dmcl, "https://dienmaycholon.com/may-loc-khong-khi-lg")
-    run_and_count(scrape_nk, "https://www.nguyenkim.com/may-loc-khong-khi-lg")
-    run_and_count(scrape_cps, "https://cellphones.com.vn/nha-thong-minh/may-loc-khong-khi/lg.html")
-    run_and_count(scrape_fpt, "https://fptshop.com.vn/may-loc-khong-khi/lg")
-    run_and_count(scrape_ctp, "https://caothienphat.com/danhmuc/thiet-bi-gia-dinh/may-loc-khong-khi/?_brand=lg")
-    run_and_count(scrape_mediamart, "https://mediamart.vn/may-loc-khong-khi-lg?a=5585")
-    run_and_count(scrape_hc, "https://hc.com.vn/ords/cat/loc-khong-khi/lg")
-    
-    # --- PHẦN 2: MÁY HÚT ẨM LG ---
-    print("\n==================== QUÉT MÁY HÚT ẨM LG ====================")
-    run_and_count(scrape_dmx, "https://www.dienmayxanh.com/may-hut-am-lg?itm_source=trang-nganh-hang&itm_medium=filter")
-    run_and_count(scrape_nk, "https://www.nguyenkim.com/may-hut-am-lg/")
-    run_and_count(scrape_cps, "https://cellphones.com.vn/do-gia-dung/may-hut-am/lg.html")
-    run_and_count(scrape_fpt, "https://fptshop.com.vn/may-hut-am/lg")
-    run_and_count(scrape_mediamart, "https://mediamart.vn/may-hut-am-lg")
-    run_and_count(scrape_hc, "https://hc.com.vn/ords/cat/may-hut-am/lg")
+
+    print("\n==================== QUÉT MÁY LỌC KHÔNG KHÍ + MÁY HÚT ẨM LG ====================")
+    tasks = [
+        # Máy lọc không khí
+        (scrape_dmx, "https://www.dienmayxanh.com/may-loc-khong-khi-lg"),
+        (scrape_dmcl, "https://dienmaycholon.com/may-loc-khong-khi-lg"),
+        (scrape_nk, "https://www.nguyenkim.com/may-loc-khong-khi-lg"),
+        (scrape_cps, "https://cellphones.com.vn/nha-thong-minh/may-loc-khong-khi/lg.html"),
+        (scrape_fpt, "https://fptshop.com.vn/may-loc-khong-khi/lg"),
+        (scrape_ctp, "https://caothienphat.com/danhmuc/thiet-bi-gia-dinh/may-loc-khong-khi/?_brand=lg"),
+        (scrape_mediamart, "https://mediamart.vn/may-loc-khong-khi-lg?a=5585"),
+        (scrape_hc, "https://hc.com.vn/ords/cat/loc-khong-khi/lg"),
+        # Máy hút ẩm
+        (scrape_dmx, "https://www.dienmayxanh.com/may-hut-am-lg?itm_source=trang-nganh-hang&itm_medium=filter"),
+        (scrape_nk, "https://www.nguyenkim.com/may-hut-am-lg/"),
+        (scrape_cps, "https://cellphones.com.vn/do-gia-dung/may-hut-am/lg.html"),
+        (scrape_fpt, "https://fptshop.com.vn/may-hut-am/lg"),
+        (scrape_mediamart, "https://mediamart.vn/may-hut-am-lg"),
+        (scrape_hc, "https://hc.com.vn/ords/cat/may-hut-am/lg"),
+    ]
+    for results in run_all(tasks):
+        add_results(results)
     
     if not all_data:
         print("[!] Không thu thập được dữ liệu nào.")
