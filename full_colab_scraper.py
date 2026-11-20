@@ -986,15 +986,15 @@ def scrape_cps(url="https://cellphones.com.vn/nha-thong-minh/may-loc-khong-khi/l
             name = clean_text(g.get("name"))
             if not name or "LG" not in name.upper():
                 continue
-            mrp = f.get("price") or 0
-            sp = f.get("special_price") or 0
+            mrp = int(f.get("price") or 0)
+            sp = int(f.get("special_price") or 0)
             selling = sp if sp and sp < mrp else mrp   # special_price = 0 nghĩa là không giảm
             print(f"[{idx}/{len(items)}] CPS: {name}")
             results.append({
                 "Page Title": "CellphoneS", "Tên Model": name,
                 "Status": "đang kinh doanh",
                 "direct product link": "https://cellphones.com.vn/" + g.get("url_path", ""),
-                "MRP price": format_price(mrp), "Selling price": format_price(selling),
+                "MRP price": format_price(str(mrp)), "Selling price": format_price(str(selling)),
                 "Thông tin chương trình khuyến mãi": "Xem khuyến mãi tại link sản phẩm.",
             })
         return results
