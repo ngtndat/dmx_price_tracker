@@ -952,40 +952,50 @@ def scrape_nk(url=None):
 # ==============================================================================
 # 4. CELLPHONES SCRAPER (CPS)
 # ==============================================================================
+CPS_API = "https://api.cellphones.com.vn/v2/graphql/query"
+CPS_CATEGORY_IDS = {
+    "may-loc-khong-khi": "1146",  # Máy lọc không khí LG
+    "may-hut-am": "2382",         # Máy hút ẩm LG
+}
+
 def scrape_cps(url="https://cellphones.com.vn/nha-thong-minh/may-loc-khong-khi/lg.html"):
-    print(f"\n--- 4. CÀO CELLPHONES (CPS) ---")
+    print("\n--- 4. CÀO CELLPHONES (CPS) ---")
+    cat_id = next((v for k, v in CPS_CATEGORY_IDS.items() if k in url), None)
+    if not cat_id:
+        print(f"[!] Không xác định được category CPS cho {url}")
+        return []
+    query = (
+        'query { products(filter: { static: { categories: ["%s"], province_id: 30, '
+        'stock: { from: 0 }, filter_price: { from: 0, to: 999999999 } } }, page: 1, size: 100) '
+        '{ general { product_id name url_path } filterable { price special_price stock } } }' % cat_id
+    )
+    headers = {**HEADERS, "Content-Type": "application/json",
+               "Origin": "https://cellphones.com.vn", "Referer": "https://cellphones.com.vn/",
+               "X-Client-Type": "web"}
     try:
-        response = requests.get(url, headers=HEADERS, verify=False, timeout=15)
-        if response.status_code != 200:
-            print(f"[!] Lỗi kết nối CellphoneS: {response.status_code}")
+        r = requests.post(CPS_API, json={"query": query, "variables": {}}, headers=headers, timeout=20)
+        if r.status_code != 200:
+            print(f"[!] Lỗi API CellphoneS: HTTP {r.status_code}")
             return []
-        soup = BeautifulSoup(response.text, "html.parser")
-        items = soup.find_all(class_="product-item")
+        r.encoding = "utf-8"
+        items = (r.json().get("data") or {}).get("products") or []
         print(f"Tìm thấy {len(items)} sản phẩm trên CellphoneS.")
         results = []
-        for idx, item in enumerate(items, 1):
-            name_tag = item.find(class_="product__name")
-            model_name = clean_text(name_tag.text) if name_tag else "LG Air Purifier"
-            a_link = item.find("a", class_="product__link")
-            if not a_link: continue
-            href = a_link.get("href")
-            full_link = href.split("?")[0]
-            
-            price_show = item.find(class_="product__price--show")
-            selling_price = clean_price(price_show.text) if price_show else "0"
-            price_through = item.find(class_="product__price--through")
-            mrp_price = clean_price(price_through.text) if price_through else selling_price
-            
-            status = "đang kinh doanh"
-            installment_div = item.find(class_="box-info__installment")
-            if installment_div and "mới" in installment_div.text.lower():
-                status = "sản phẩm mới"
-                
-            print(f"[{idx}/{len(items)}] CPS: {model_name}")
+        for idx, it in enumerate(items, 1):
+            g, f = it.get("general") or {}, it.get("filterable") or {}
+            name = clean_text(g.get("name"))
+            if not name or "LG" not in name.upper():
+                continue
+            mrp = f.get("price") or 0
+            sp = f.get("special_price") or 0
+            selling = sp if sp and sp < mrp else mrp   # special_price = 0 nghĩa là không giảm
+            print(f"[{idx}/{len(items)}] CPS: {name}")
             results.append({
-                "Page Title": "CellphoneS", "Tên Model": model_name, "Status": status, "direct product link": full_link,
-                "MRP price": format_price(mrp_price), "Selling price": format_price(selling_price),
-                "Thông tin chương trình khuyến mãi": "Xem khuyến mãi tại link sản phẩm."
+                "Page Title": "CellphoneS", "Tên Model": name,
+                "Status": "đang kinh doanh",
+                "direct product link": "https://cellphones.com.vn/" + g.get("url_path", ""),
+                "MRP price": format_price(mrp), "Selling price": format_price(selling),
+                "Thông tin chương trình khuyến mãi": "Xem khuyến mãi tại link sản phẩm.",
             })
         return results
     except Exception as e:
