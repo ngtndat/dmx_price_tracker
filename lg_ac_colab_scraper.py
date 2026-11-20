@@ -1361,6 +1361,24 @@ def get_gc():
 # ==============================================================================
 # CORE JOB: Chạy 1 lần quét + ghi sheet + gửi telegram
 # ==============================================================================
+from concurrent.futures import ThreadPoolExecutor
+
+def run_all(tasks, max_workers=8):
+    """tasks: list các (hàm_cào, url). Chạy song song, trả kết quả theo ĐÚNG thứ tự đầu vào.
+    Có in thời gian từng trang để biết trang nào chậm."""
+    def _one(t):
+        fn, url = t
+        t0 = time.time()
+        try:
+            res = fn(url)
+        except Exception as e:
+            print(f"[!] {fn.__name__} lỗi: {e}")
+            res = []
+        print(f"[⏱] {fn.__name__} ({url[:60]}): {time.time() - t0:.0f}s, {len(res)} sp")
+        return res
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(tasks))) as ex:
+        return list(ex.map(_one, tasks))
+
 def run_scraper_job(gc, next_run_str=None):
     """Thực hiện 1 lần quét toàn bộ, ghi vào Google Sheet, gửi Telegram."""
     print("\n" + "="*70)
@@ -1370,8 +1388,7 @@ def run_scraper_job(gc, next_run_str=None):
     all_data = []
     source_counts = {}
     
-    def run_and_count(scrape_fn, *args, label=None):
-        results = scrape_fn(*args)
+    def add_results(results, label=None):
         # Lọc nghiêm ngặt chỉ giữ lại sản phẩm có chữ LG trong tên để tránh dính quảng cáo hãng khác
         filtered = []
         for item in results:
@@ -1380,19 +1397,22 @@ def run_scraper_job(gc, next_run_str=None):
             else:
                 print(f"    [!] Đã loại bỏ sản phẩm khác hãng: {item.get('Tên Model')} từ {item.get('Page Title')}")
         results = filtered
-        
         src = results[0]["Page Title"] if results else (label or "Unknown")
         source_counts[src] = source_counts.get(src, 0) + len(results)
         all_data.extend(results)
-    
+
     print("\n==================== BẮT ĐẦU QUÉT MÁY LẠNH LG ====================")
-    run_and_count(scrape_dmx, "https://www.dienmayxanh.com/may-lanh-lg")
-    run_and_count(scrape_dmcl, "https://dienmaycholon.com/may-lanh-lg")
-    run_and_count(scrape_nk, "https://www.nguyenkim.com/dieu-hoa.c?property=thuong-hieu-brand:LG")
-    run_and_count(scrape_cps, "https://cellphones.com.vn/may-lanh/lg.html")
-    run_and_count(scrape_fpt, "https://fptshop.com.vn/may-lanh-dieu-hoa/lg")
-    run_and_count(scrape_mediamart, "https://mediamart.vn/dieu-hoa-nhiet-do-lg")
-    run_and_count(scrape_hc, "https://hc.com.vn/ords/cat/dieu-hoa/lg")
+    tasks = [
+        (scrape_dmx, "https://www.dienmayxanh.com/may-lanh-lg"),
+        (scrape_dmcl, "https://dienmaycholon.com/may-lanh-lg"),
+        (scrape_nk, "https://www.nguyenkim.com/dieu-hoa.c?property=thuong-hieu-brand:LG"),
+        (scrape_cps, "https://cellphones.com.vn/may-lanh/lg.html"),
+        (scrape_fpt, "https://fptshop.com.vn/may-lanh-dieu-hoa/lg"),
+        (scrape_mediamart, "https://mediamart.vn/dieu-hoa-nhiet-do-lg"),
+        (scrape_hc, "https://hc.com.vn/ords/cat/dieu-hoa/lg"),
+    ]
+    for results in run_all(tasks):
+        add_results(results)
     
     if not all_data:
         print("[!] Không thu thập được dữ liệu nào.")
