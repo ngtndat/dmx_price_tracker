@@ -757,40 +757,50 @@ def scrape_nk(url="https://www.nguyenkim.com/dieu-hoa.c?property=thuong-hieu-bra
 # ==============================================================================
 # 4. CELLPHONES SCRAPER (CPS)
 # ==============================================================================
+CPS_API = "https://api.cellphones.com.vn/v2/graphql/query"
+CPS_CATEGORY_IDS = {
+    "may-lanh": "1929",  # Điều hòa, Máy lạnh LG
+}
+
 def scrape_cps(url="https://cellphones.com.vn/may-lanh/lg.html"):
-    print(f"\n--- 4. CÀO CELLPHONES (CPS) ---")
+    print("\n--- 4. CÀO CELLPHONES (CPS) ---")
+    print("[CPS v3 - API]")
+    cat_id = next((v for k, v in CPS_CATEGORY_IDS.items() if k in url), None)
+    if not cat_id:
+        print(f"[!] Không xác định được category CPS cho {url}")
+        return []
+    query = (
+        'query { products(filter: { static: { categories: ["%s"], province_id: 30, '
+        'stock: { from: 0 }, filter_price: { from: 0, to: 999999999 } } }, page: 1, size: 100) '
+        '{ general { product_id name url_path } filterable { price special_price stock } } }' % cat_id
+    )
+    headers = {**HEADERS, "Content-Type": "application/json",
+               "Origin": "https://cellphones.com.vn", "Referer": "https://cellphones.com.vn/",
+               "X-Client-Type": "web"}
     try:
-        response = requests.get(url, headers=HEADERS, verify=False, timeout=15)
-        if response.status_code != 200:
-            print(f"[!] Lỗi kết nối CellphoneS: {response.status_code}")
+        r = requests.post(CPS_API, json={"query": query, "variables": {}}, headers=headers, timeout=20)
+        if r.status_code != 200:
+            print(f"[!] Lỗi API CellphoneS: HTTP {r.status_code}")
             return []
-        soup = BeautifulSoup(response.text, "html.parser")
-        items = soup.find_all(class_="product-item")
+        r.encoding = "utf-8"
+        items = (r.json().get("data") or {}).get("products") or []
         print(f"Tìm thấy {len(items)} sản phẩm trên CellphoneS.")
         results = []
-        for idx, item in enumerate(items, 1):
-            name_tag = item.find(class_="product__name")
-            model_name = clean_text(name_tag.text) if name_tag else "LG Air Conditioner"
-            a_link = item.find("a", class_="product__link")
-            if not a_link: continue
-            href = a_link.get("href")
-            full_link = href.split("?")[0]
-            
-            price_show = item.find(class_="product__price--show")
-            selling_price = clean_price(price_show.text) if price_show else "0"
-            price_through = item.find(class_="product__price--through")
-            mrp_price = clean_price(price_through.text) if price_through else selling_price
-            
-            status = "đang kinh doanh"
-            installment_div = item.find(class_="box-info__installment")
-            if installment_div and "mới" in installment_div.text.lower():
-                status = "sản phẩm mới"
-                
-            print(f"[{idx}/{len(items)}] CPS: {model_name}")
+        for idx, it in enumerate(items, 1):
+            g, f = it.get("general") or {}, it.get("filterable") or {}
+            name = clean_text(g.get("name"))
+            if not name or "LG" not in name.upper():
+                continue
+            mrp = int(f.get("price") or 0)
+            sp = int(f.get("special_price") or 0)
+            selling = sp if sp and sp < mrp else mrp   # special_price = 0 nghĩa là không giảm
+            print(f"[{idx}/{len(items)}] CPS: {name}")
             results.append({
-                "Page Title": "CellphoneS", "Tên Model": model_name, "Status": status, "direct product link": full_link,
-                "MRP price": format_price(mrp_price), "Selling price": format_price(selling_price),
-                "Thông tin chương trình khuyến mãi": "Xem khuyến mãi tại link sản phẩm."
+                "Page Title": "CellphoneS", "Tên Model": name,
+                "Status": "đang kinh doanh",
+                "direct product link": "https://cellphones.com.vn/" + g.get("url_path", ""),
+                "MRP price": format_price(str(mrp)), "Selling price": format_price(str(selling)),
+                "Thông tin chương trình khuyến mãi": "Xem khuyến mãi tại link sản phẩm.",
             })
         return results
     except Exception as e:
@@ -802,21 +812,40 @@ def scrape_cps(url="https://cellphones.com.vn/may-lanh/lg.html"):
 # ==============================================================================
 FPT_PROXIES = []
 
+def _fpt_try_proxy(proxy, url, headers):
+    """Thử 1 proxy. Trả về (proxy, response) nếu lấy được trang FPT thật, ngược lại (proxy, None)."""
+    try:
+        r = requests.get(url, headers=headers,
+                         proxies={"http": f"http://{proxy}", "https": f"http://{proxy}"},
+                         timeout=8, verify=False)
+        if r.status_code == 200 and "cardInfo" in r.text:
+            return proxy, r
+    except Exception:
+        pass
+    return proxy, None
+
 def scrape_fpt(url="https://fptshop.com.vn/may-lanh-dieu-hoa/lg"):
     global FPT_PROXIES
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     print(f"\n--- 5. CÀO FPT SHOP (FPT) ---")
-    
+
+    # 1. Gom proxy VN từ nhiều nguồn (ProxyScrape + Geonode), bỏ trùng
     if not FPT_PROXIES:
         print("Đang tải danh sách proxy Việt Nam từ API...")
+        pool = []
         try:
             proxy_api_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=6000&country=VN&ssl=all&anonymity=all"
             resp = requests.get(proxy_api_url, timeout=10)
-            FPT_PROXIES = [p.strip() for p in resp.text.strip().split("\n") if p.strip()]
-            print(f"-> Đã lấy được {len(FPT_PROXIES)} proxy Việt Nam.")
+            pool += [p.strip() for p in resp.text.strip().split("\n") if p.strip()]
         except Exception as e:
-            print(f"[!] Không thể lấy danh sách proxy: {e}")
-            FPT_PROXIES = []
-            
+            print(f"[!] Lỗi tải ProxyScrape: {e}")
+        try:
+            pool += [ip for ip, _ in get_vn_proxies()]
+        except Exception as e:
+            print(f"[!] Lỗi tải Geonode: {e}")
+        FPT_PROXIES = list(dict.fromkeys(pool))
+        print(f"-> Đã gom được {len(FPT_PROXIES)} proxy Việt Nam.")
+
     if not FPT_PROXIES:
         print("[!] Không có proxy Việt Nam nào. Không thể vượt qua geoblock của FPT Shop.")
         return []
@@ -826,61 +855,137 @@ def scrape_fpt(url="https://fptshop.com.vn/may-lanh-dieu-hoa/lg"):
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
         "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8",
     }
-    
-    for idx, proxy in enumerate(FPT_PROXIES, 1):
-        print(f"  [{idx}/{len(FPT_PROXIES)}] Thử cào FPT qua proxy VN: {proxy}...")
-        proxies = {
-            "http": f"http://{proxy}",
-            "https": f"http://{proxy}"
-        }
-        try:
-            response = requests.get(url, headers=headers, proxies=proxies, timeout=8, verify=False)
-            
-            if response.status_code == 200:
-                if "cardInfo" in response.text:
-                    print(f"  [Thành công] Đã tải trang FPT Shop thành công qua proxy {proxy}!")
-                    soup = BeautifulSoup(response.text, "html.parser")
-                    cards = soup.find_all(class_="cardInfo")
-                    print(f"Tìm thấy {len(cards)} sản phẩm trên FPT Shop.")
-                    results = []
-                    
-                    for c_idx, card in enumerate(cards, 1):
-                        a_tag = card.find("a")
-                        if not a_tag: continue
-                        model_name = a_tag.get("title") or (card.find("h3").text.strip() if card.find("h3") else "N/A")
-                        href = a_tag.get("href")
-                        full_link = href if href.startswith("http") else f"https://fptshop.com.vn{href}"
-                        full_link = full_link.split("?")[0]
-                        
-                        price_old = card.find(class_="line-through")
-                        mrp_price = clean_price(price_old.text) if price_old else "0"
-                        price_new = card.find(class_="text-textOnWhitePrimary")
-                        selling_price = clean_price(price_new.text) if price_new else "0"
-                        if mrp_price == "0": mrp_price = selling_price
-                        
-                        promo = card.find(class_="line-clamp-2")
-                        promotions = clean_text(promo.text) if promo else "Xem chi tiết khuyến mãi tại link."
-                        
-                        status = "đang kinh doanh"
-                        if "mới" in model_name.lower() or "gen 2" in model_name.lower():
-                            status = "sản phẩm mới"
-                            
-                        print(f"    [{c_idx}/{len(cards)}] FPT: {model_name}")
-                        results.append({
-                            "Page Title": "FPT", "Tên Model": model_name, "Status": status, "direct product link": full_link,
-                            "MRP price": format_price(mrp_price), "Selling price": format_price(selling_price),
-                            "Thông tin chương trình khuyến mãi": promotions
-                        })
-                    return results
-                else:
-                    print("  [!] Lỗi: Tải trang thành công nhưng Cloudflare captcha hiện diện.")
-            else:
-                print(f"  [!] Lỗi HTTP: {response.status_code}")
-        except Exception as e:
-            print(f"  [!] Lỗi kết nối proxy: {e}")
-            
-    print("[!] Không có proxy Việt Nam nào kết nối thành công tới FPT Shop.")
-    return []
+
+    # 2. Thử song song nhiều proxy, proxy nào lấy được trang trước thì dùng
+    response, good_proxy = None, None
+    candidates = FPT_PROXIES[:60]
+    print(f"  Thử song song {len(candidates)} proxy (20 luồng)...")
+    ex = ThreadPoolExecutor(max_workers=20)
+    try:
+        futures = [ex.submit(_fpt_try_proxy, p, url, headers) for p in candidates]
+        for fut in as_completed(futures):
+            proxy, r = fut.result()
+            if r is not None:
+                response, good_proxy = r, proxy
+                break
+    finally:
+        ex.shutdown(wait=False, cancel_futures=True)
+
+    if response is None:
+        print("[!] Không có proxy Việt Nam nào kết nối thành công tới FPT Shop.")
+        return []
+
+    print(f"  [Thành công] Đã tải trang FPT Shop qua proxy {good_proxy}!")
+    soup = BeautifulSoup(response.text, "html.parser")
+    cards = soup.find_all(class_="cardInfo")
+    print(f"Tìm thấy {len(cards)} sản phẩm trên FPT Shop.")
+    results = []
+    for c_idx, card in enumerate(cards, 1):
+        a_tag = card.find("a")
+        if not a_tag: continue
+        model_name = a_tag.get("title") or (card.find("h3").text.strip() if card.find("h3") else "N/A")
+        href = a_tag.get("href")
+        full_link = href if href.startswith("http") else f"https://fptshop.com.vn{href}"
+        full_link = full_link.split("?")[0]
+
+        price_old = card.find(class_="line-through")
+        mrp_price = clean_price(price_old.text) if price_old else "0"
+        price_new = card.find(class_="text-textOnWhitePrimary")
+        selling_price = clean_price(price_new.text) if price_new else "0"
+        if mrp_price == "0": mrp_price = selling_price
+
+        promo = card.find(class_="line-clamp-2")
+        promotions = clean_text(promo.text) if promo else "Xem chi tiết khuyến mãi tại link."
+
+        status = "đang kinh doanh"
+        if "mới" in model_name.lower() or "gen 2" in model_name.lower():
+            status = "sản phẩm mới"
+
+        print(f"    [{c_idx}/{len(cards)}] FPT: {model_name}")
+        results.append({
+            "Page Title": "FPT", "Tên Model": model_name, "Status": status, "direct product link": full_link,
+            "MRP price": format_price(mrp_price), "Selling price": format_price(selling_price),
+            "Thông tin chương trình khuyến mãi": promotions
+        })
+    return results
+
+#def scrape_fpt(url="https://fptshop.com.vn/may-lanh-dieu-hoa/lg"):
+#    global FPT_PROXIES
+#    print(f"\n--- 5. CÀO FPT SHOP (FPT) ---")    
+#    if not FPT_PROXIES:
+#        print("Đang tải danh sách proxy Việt Nam từ API...")
+#        try:
+#            proxy_api_url = "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=6000&country=VN&ssl=all&anonymity=all"
+#            resp = requests.get(proxy_api_url, timeout=10)
+#            FPT_PROXIES = [p.strip() for p in resp.text.strip().split("\n") if p.strip()]
+#            print(f"-> Đã lấy được {len(FPT_PROXIES)} proxy Việt Nam.")
+#        except Exception as e:
+#            print(f"[!] Không thể lấy danh sách proxy: {e}")
+#            FPT_PROXIES = []            
+#    if not FPT_PROXIES:
+#        print("[!] Không có proxy Việt Nam nào. Không thể vượt qua geoblock của FPT Shop.")
+#        return []
+#
+#    headers = {
+#        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36",
+#        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+#        "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8",
+#    }
+#    
+#    for idx, proxy in enumerate(FPT_PROXIES, 1):
+#        print(f"  [{idx}/{len(FPT_PROXIES)}] Thử cào FPT qua proxy VN: {proxy}...")
+#        proxies = {
+#            "http": f"http://{proxy}",
+#            "https": f"http://{proxy}"
+#        }
+#        try:
+#            response = requests.get(url, headers=headers, proxies=proxies, timeout=8, verify=False)
+#            
+#            if response.status_code == 200:
+#                if "cardInfo" in response.text:
+#                    print(f"  [Thành công] Đã tải trang FPT Shop thành công qua proxy {proxy}!")
+#                    soup = BeautifulSoup(response.text, "html.parser")
+#                    cards = soup.find_all(class_="cardInfo")
+#                    print(f"Tìm thấy {len(cards)} sản phẩm trên FPT Shop.")
+#                    results = []
+#                    
+#                    for c_idx, card in enumerate(cards, 1):
+#                        a_tag = card.find("a")
+#                        if not a_tag: continue
+#                        model_name = a_tag.get("title") or (card.find("h3").text.strip() if card.find("h3") else "N/A")
+#                        href = a_tag.get("href")
+#                        full_link = href if href.startswith("http") else f"https://fptshop.com.vn{href}"
+#                        full_link = full_link.split("?")[0]
+#                        
+#                        price_old = card.find(class_="line-through")
+#                        mrp_price = clean_price(price_old.text) if price_old else "0"
+#                        price_new = card.find(class_="text-textOnWhitePrimary")
+#                        selling_price = clean_price(price_new.text) if price_new else "0"
+#                        if mrp_price == "0": mrp_price = selling_price
+#                        
+#                        promo = card.find(class_="line-clamp-2")
+#                        promotions = clean_text(promo.text) if promo else "Xem chi tiết khuyến mãi tại link."
+#                        
+#                        status = "đang kinh doanh"
+#                        if "mới" in model_name.lower() or "gen 2" in model_name.lower():
+#                            status = "sản phẩm mới"
+#                            
+#                        print(f"    [{c_idx}/{len(cards)}] FPT: {model_name}")
+#                        results.append({
+#                            "Page Title": "FPT", "Tên Model": model_name, "Status": status, "direct product link": full_link,
+#                            "MRP price": format_price(mrp_price), "Selling price": format_price(selling_price),
+#                            "Thông tin chương trình khuyến mãi": promotions
+#                        })
+#                    return results
+#                else:
+#                    print("  [!] Lỗi: Tải trang thành công nhưng Cloudflare captcha hiện diện.")
+#            else:
+#                print(f"  [!] Lỗi HTTP: {response.status_code}")
+#        except Exception as e:
+#            print(f"  [!] Lỗi kết nối proxy: {e}")
+#            
+#    print("[!] Không có proxy Việt Nam nào kết nối thành công tới FPT Shop.")
+#    return []
 
 # ==============================================================================
 # 6. MEDIAMART SCRAPER (Lọc trùng lặp URL)
