@@ -1537,6 +1537,24 @@ def get_gc():
 # ==============================================================================
 # CORE JOB: Chạy 1 lần quét + ghi sheet + gửi telegram
 # ==============================================================================
+from concurrent.futures import ThreadPoolExecutor
+
+def run_all(tasks, max_workers=8):
+    """tasks: list các (hàm_cào, url). Chạy song song, trả kết quả theo ĐÚNG thứ tự đầu vào.
+    Có in thời gian từng trang để biết trang nào chậm."""
+    def _one(t):
+        fn, url = t
+        t0 = time.time()
+        try:
+            res = fn(url)
+        except Exception as e:
+            print(f"[!] {fn.__name__} lỗi: {e}")
+            res = []
+        print(f"[⏱] {fn.__name__} ({url[:60]}): {time.time() - t0:.0f}s, {len(res)} sp")
+        return res
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(tasks))) as ex:
+        return list(ex.map(_one, tasks))
+
 def run_scraper_job(gc, next_run_str=None):
     """Thực hiện 1 lần quét toàn bộ, ghi vào Google Sheet, gửi Telegram."""
     print("\n" + "="*70)
@@ -1546,31 +1564,32 @@ def run_scraper_job(gc, next_run_str=None):
     all_data = []
     source_counts = {}
     
-    def run_and_count(scrape_fn, *args, label=None):
-        results = scrape_fn(*args)
+    def add_results(results, label=None):
         src = results[0]["Page Title"] if results else (label or "Unknown")
         source_counts[src] = source_counts.get(src, 0) + len(results)
         all_data.extend(results)
-    
-    # --- PHẦN 1: MÁY LỌC KHÔNG KHÍ LG ---
-    print("\n==================== QUÉT MÁY LỌC KHÔNG KHÍ LG ====================")
-    run_and_count(scrape_dmx, "https://www.dienmayxanh.com/may-loc-khong-khi-lg")
-    run_and_count(scrape_dmcl, "https://dienmaycholon.com/may-loc-khong-khi-lg")
-    run_and_count(scrape_nk, "https://www.nguyenkim.com/may-loc-khong-khi-lg")
-    run_and_count(scrape_cps, "https://cellphones.com.vn/nha-thong-minh/may-loc-khong-khi/lg.html")
-    run_and_count(scrape_fpt, "https://fptshop.com.vn/may-loc-khong-khi/lg")
-    run_and_count(scrape_ctp, "https://caothienphat.com/danhmuc/thiet-bi-gia-dinh/may-loc-khong-khi/?_brand=lg")
-    run_and_count(scrape_mediamart, "https://mediamart.vn/may-loc-khong-khi-lg?a=5585")
-    run_and_count(scrape_hc, "https://hc.com.vn/ords/cat/loc-khong-khi/lg")
-    
-    # --- PHẦN 2: MÁY HÚT ẨM LG ---
-    print("\n==================== QUÉT MÁY HÚT ẨM LG ====================")
-    run_and_count(scrape_dmx, "https://www.dienmayxanh.com/may-hut-am-lg?itm_source=trang-nganh-hang&itm_medium=filter")
-    run_and_count(scrape_nk, "https://www.nguyenkim.com/may-hut-am-lg/")
-    run_and_count(scrape_cps, "https://cellphones.com.vn/do-gia-dung/may-hut-am/lg.html")
-    run_and_count(scrape_fpt, "https://fptshop.com.vn/may-hut-am/lg")
-    run_and_count(scrape_mediamart, "https://mediamart.vn/may-hut-am-lg")
-    run_and_count(scrape_hc, "https://hc.com.vn/ords/cat/may-hut-am/lg")
+
+    print("\n==================== QUÉT MÁY LỌC KHÔNG KHÍ + MÁY HÚT ẨM LG ====================")
+    tasks = [
+        # Máy lọc không khí
+        (scrape_dmx, "https://www.dienmayxanh.com/may-loc-khong-khi-lg"),
+        (scrape_dmcl, "https://dienmaycholon.com/may-loc-khong-khi-lg"),
+        (scrape_nk, "https://www.nguyenkim.com/may-loc-khong-khi-lg"),
+        (scrape_cps, "https://cellphones.com.vn/nha-thong-minh/may-loc-khong-khi/lg.html"),
+        (scrape_fpt, "https://fptshop.com.vn/may-loc-khong-khi/lg"),
+        (scrape_ctp, "https://caothienphat.com/danhmuc/thiet-bi-gia-dinh/may-loc-khong-khi/?_brand=lg"),
+        (scrape_mediamart, "https://mediamart.vn/may-loc-khong-khi-lg?a=5585"),
+        (scrape_hc, "https://hc.com.vn/ords/cat/loc-khong-khi/lg"),
+        # Máy hút ẩm
+        (scrape_dmx, "https://www.dienmayxanh.com/may-hut-am-lg?itm_source=trang-nganh-hang&itm_medium=filter"),
+        (scrape_nk, "https://www.nguyenkim.com/may-hut-am-lg/"),
+        (scrape_cps, "https://cellphones.com.vn/do-gia-dung/may-hut-am/lg.html"),
+        (scrape_fpt, "https://fptshop.com.vn/may-hut-am/lg"),
+        (scrape_mediamart, "https://mediamart.vn/may-hut-am-lg"),
+        (scrape_hc, "https://hc.com.vn/ords/cat/may-hut-am/lg"),
+    ]
+    for results in run_all(tasks):
+        add_results(results)
     
     if not all_data:
         print("[!] Không thu thập được dữ liệu nào.")
